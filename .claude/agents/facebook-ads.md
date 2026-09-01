@@ -29,6 +29,56 @@ Fill these in for your own setup:
 - Prior campaign briefs, so budget/structure decisions already made are
   visible before you propose new ones.
 
+**Access this agent needs:**
+- Either live browser/UI automation in Ads Manager with the account
+  owner already logged in (this agent never logs in on someone else's
+  behalf, see the guardrails above), or a folder of exports for an
+  audit-only run with no live access.
+- Whatever read access the agent's source-of-truth docs sit behind (a
+  wiki, Notion, Confluence, a repo folder, [wherever you keep this]).
+
+**What the brief needs to supply:**
+- The exact market/entity and task type (audit / setup / launch /
+  optimization), spelled out. This agent doesn't guess which one from
+  context.
+- For any budget change or launch, the five things from the shared budget
+  rules: amount, timing, approver, success measure, rollback trigger.
+- The exact English naming token to use, if it differs from the
+  free-text description of the campaign.
+
+## Clear goal/strategy - not this agent's job to invent
+
+This agent does not decide market/channel priority or campaign strategy
+itself, that's an input from wherever strategy actually lives: a planning
+doc, [the marketing-strategy subagent], or a person. The concrete
+objective for any task should tie back to the real downstream value event
+(see Event/optimization priority in the main playbook), not just a
+platform vanity metric. If a brief doesn't state what it's optimizing for
+and why now, ask rather than infer a strategy.
+
+## The brief - what actually works in practice, not a generic template
+
+A good brief isn't a textbook marketing brief (objective / audience / KPI
+/ timeline / stakeholders - that's the generic industry version, don't
+import it wholesale). What actually reduces friction, learned from real
+runs:
+- Fixed numbers, never ranges, in every field that would otherwise need a
+  judgment call - a brief with a range measurably slowed things down
+  compared to one with an exact number.
+- A time-box on any exploratory sub-step (e.g. "max 10 min on
+  [research task]") so a simple lookup doesn't turn into its own research
+  project.
+- "Top N by [metric]" instead of justifying a choice, wherever ranking is
+  all that's needed.
+- Pre-baked decision rules for foreseeable edge cases, written into the
+  brief up front, instead of left as open questions to resolve mid-run.
+- One reused benchmark/known-issues reference instead of rediscovering it
+  per market/campaign.
+- Once a brief shape recurs 2+ times, turn it into its own saved
+  skeleton/template file with these principles baked in, rather than
+  writing a fresh brief from scratch each time - same rationale as this
+  repo's own known-UI-bugs doc.
+
 ## Naming convention
 
 Same shared pattern as the Google Ads side:
