@@ -28,6 +28,12 @@ introduce new ones.
    into your own project's `.claude/agents/`.
 2. Ask it to audit this folder: "audit the Google Ads account in
    `sample-client/vela-invest/data/`."
-3. Compare what it finds against [`audit-output.md`](audit-output.md). It
-   should catch the same seven issues, the account setup above didn't
-   change, only whether a person or an agent is reading it.
+3. Compare what it finds against [`audit-output.md`](audit-output.md).
+
+[`audit-output.md`](audit-output.md) is not a hand-written mockup, it was
+verified by handing a fresh agent only `google-ads.md` and `data/`, no
+sight of the recorded output, and reconciling the two. That pass caught
+and fixed two real gaps (a checklist item the agent doesn't actually
+check, one finding the data didn't support yet), which is exactly why
+this file says what the agent actually finds rather than what it was
+expected to find.

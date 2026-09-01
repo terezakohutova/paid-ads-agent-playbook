@@ -23,8 +23,8 @@ has been stripped or replaced with a placeholder.
 2. Ask it to audit [`sample-client/vela-invest/data/`](./sample-client/vela-invest/data/),
    a fictional account with seven planted issues.
 3. Compare what it finds against [`sample-client/vela-invest/audit-output.md`](./sample-client/vela-invest/audit-output.md),
-   the recorded output of that exact audit, each finding tied back to the
-   specific guardrail that catches it.
+   the output of that exact audit, verified by an independent blind run,
+   each finding tied back to the specific guardrail that catches it.
 
 ## Using this for real
 
