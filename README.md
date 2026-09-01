@@ -1,9 +1,10 @@
 # Paid Ads Agent Playbook
 
-A pair of reusable Claude Code subagent definitions for running Google Ads and
-Meta (Facebook/Instagram) Ads accounts across multiple markets/legal entities:
-audit, account setup, campaign structure, creative specs, QA, launch, and
-ongoing optimization.
+Two runnable Claude Code subagents, [`.claude/agents/google-ads.md`](./.claude/agents/google-ads.md)
+and [`.claude/agents/facebook-ads.md`](./.claude/agents/facebook-ads.md), for
+running Google Ads and Meta (Facebook/Instagram) Ads accounts across multiple
+markets/legal entities: audit, account setup, campaign structure, creative
+specs, QA, launch, and ongoing optimization.
 
 It replaces "click around and learn as you go" with a fixed, repeatable
 process, because in practice the same mistakes (wrong budget pasted in, wrong
@@ -14,26 +15,27 @@ were written down explicitly.
 anonymized: every company name, account ID, internal link, and person's name
 has been stripped or replaced with a placeholder.
 
-## See it applied
+## Try it in five minutes
 
-[`sample-client/vela-invest/`](./sample-client/vela-invest/) runs the Phase 0
-audit checklist against a fictional account with six planted issues (a
-conversion action stuck on Secondary, a compliance claim copied between
-markets, an attribution gap on a new sub-account) and shows the actual
-findings, each one tied back to the specific guardrail that catches it. Read
-this before the full playbook if you want to see what "audit output" looks
-like rather than just what the checklist says.
+1. Copy `.claude/agents/google-ads.md` into your own project's
+   `.claude/agents/` (no editing required to try it, the placeholders only
+   matter once you point it at your own account).
+2. Ask it to audit [`sample-client/vela-invest/data/`](./sample-client/vela-invest/data/),
+   a fictional account with seven planted issues.
+3. Compare what it finds against [`sample-client/vela-invest/audit-output.md`](./sample-client/vela-invest/audit-output.md),
+   the recorded output of that exact audit, each finding tied back to the
+   specific guardrail that catches it.
 
-## Using this
+## Using this for real
 
-1. Read [`paid-ads-agent-playbook.md`](./paid-ads-agent-playbook.md).
+1. Read [`paid-ads-agent-playbook.md`](./paid-ads-agent-playbook.md), the
+   canonical ruleset both agents point back to.
 2. Replace `[Product]`, `[Company]`, `[Market A/B/C]`, and the entity/account
    tables with your own.
 3. Replace the "source of truth" bullets with wherever you actually keep
    campaign plans, tone-of-voice docs, and naming conventions.
-4. Drop the two agent definitions into `.claude/agents/google-ads.md` and
-   `.claude/agents/facebook-ads.md` in your own project, or use the file as a
-   standalone reference doc.
+4. Copy `.claude/agents/google-ads.md` and `.claude/agents/facebook-ads.md`
+   into your own project.
 5. Keep the guardrails and phase checklists. They encode mistakes that are
    easy to repeat regardless of company (placeholder budgets, live-launching
    by accident, copying banned copy between markets, over-scoped

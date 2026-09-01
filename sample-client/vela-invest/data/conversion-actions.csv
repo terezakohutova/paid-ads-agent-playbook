@@ -1,0 +1,5 @@
+action,status,count_setting,notes
+App Install,Primary,Every,
+Registration Complete,Secondary,One,
+Account Link (bank),Secondary,One,
+First Deposit (Activation),Secondary in CZ/SK; not present in PL,One,
