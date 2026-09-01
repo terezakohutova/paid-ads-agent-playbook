@@ -14,6 +14,16 @@ were written down explicitly.
 anonymized: every company name, account ID, internal link, and person's name
 has been stripped or replaced with a placeholder.
 
+## See it applied
+
+[`sample-client/vela-invest/`](./sample-client/vela-invest/) runs the Phase 0
+audit checklist against a fictional account with six planted issues (a
+conversion action stuck on Secondary, a compliance claim copied between
+markets, an attribution gap on a new sub-account) and shows the actual
+findings, each one tied back to the specific guardrail that catches it. Read
+this before the full playbook if you want to see what "audit output" looks
+like rather than just what the checklist says.
+
 ## Using this
 
 1. Read [`paid-ads-agent-playbook.md`](./paid-ads-agent-playbook.md).
