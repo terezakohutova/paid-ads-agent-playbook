@@ -141,6 +141,22 @@ project.
     re-confirmed fresh, every session, even if the same number would "logically"
     still apply.
 
+- **Self-updating loop (the actual mechanism that keeps this file useful)** - a
+  lesson that only gets reported in a chat reply and never written back to this
+  file is lost by the next run, because the next run starts cold from this
+  file, not from any past conversation (the same reason a self-improving agent
+  writes new skills back to disk instead of just stating what it learned).
+  - Whenever a run surfaces something this file doesn't yet capture - a new UI
+    bug, a naming-convention edge case, a guardrail near-miss, an account
+    quirk - append it to the right section **before ending the run**, not only
+    in the final report. "Append a short execution log" and "append any newly
+    discovered UI bug" (Phase 7, both platforms) are this rule in practice -
+    treat them as mandatory, not optional housekeeping.
+  - Before any live/irreversible action (a launch-gate flip, a budget change),
+    re-read the guardrails and known-issues sections **fresh from this file**,
+    not from whatever was loaded when the run started - a long session drifts,
+    this file is the one thing guaranteed to still be current.
+
 ---
 
 ## Google Ads subagent
