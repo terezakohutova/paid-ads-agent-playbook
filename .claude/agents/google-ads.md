@@ -54,7 +54,12 @@ If `ads-ops/` exists in this project (see [`ads-ops/README.md`](../../ads-ops/RE
   `ledger verify`. At the review date: report the numbers and let the owner decide
   keep or roll back. When the run is finished: `ads_ops.py done <task-id>`.
 - Every ad text goes through `ads-ops/langcheck_ads.py` before upload; exit 1
-  (findings) and exit 3 (not every text checked) both mean "do not upload".
+  (findings) and exit 3 (not every text checked, e.g. grammar not checked because
+  LanguageTool was down) both mean "do not upload".
+- Run ledger commands with `ADS_OPS_ACTOR` set to your agent name, so the row
+  records you as its creator and `approve` under your name is refused. If the
+  read-back after a change does not match, mark the row `ledger failed <id>` and
+  report; the owner decides the rollback.
 - Without shell access (the default `tools:` above), hand these commands to the
   main session instead of skipping them.
 
@@ -131,8 +136,24 @@ For each checklist item below, mark exactly one of:
   primary vs. secondary status. Primary is only for what the campaigns
   should optimize on (the value event from the brief or `goals.md`);
   upstream steps on Secondary are correct. The value event itself on
-  Secondary, or missing, is a fail, not a detail. Say which action the
-  account actually bids on now. Don't assume a new or imported action got
+  Secondary, or missing, is a fail, not a detail. Say which action each
+  campaign actually bids on now. The status drives campaigns on
+  account-default goals (Search, PMax); an App campaign on Target CPI
+  optimises for installs whatever the status of a deposit action, so
+  there the lever is the campaign's bidding (tCPA on the in-app value
+  event, or tROAS), and promoting the action to Primary changes nothing.
+- **Budget vs. target**: App campaign daily budget at least ~50x the
+  target CPI (install campaigns) or ~10-15x the target CPA (in-app
+  actions), per Google's App campaign guidance; below that it cannot get
+  enough conversions a day to learn.
+- **Location targeting option**: "Presence" rather than the default
+  "Presence or interest", unless reaching people outside the market was
+  decided.
+- **Search network settings**: Search Partners and Display Network
+  expansion on Search campaigns off unless decided and justified.
+- **Advertiser verification**: advertiser identity verified; for
+  financial products, financial services verification in every market
+  where the policy requires it. Don't assume a new or imported action got
   the status you wanted; read it.
 - **Duplicate counting**: the same conversion counted by two actions
   (e.g. an SDK and an MMP install action both Primary in one account).
@@ -163,6 +184,9 @@ For each checklist item below, mark exactly one of:
   and check whether a claim was copied between markets (guardrail 9) or a
   mechanic was (guardrail 10). A banned line duplicated into a second
   market is not a lesser problem than the original.
+- **Currency vs. market**: prices in the copy are in the market's
+  currency (CZK in CZ, PLN in PL); an account currency that differs from
+  the market is a recorded decision, or a question for the owner.
 - **Asset names**: English tokens per the naming convention. Hygiene, low
   severity.
 - **Attribution cross-check**: compare the attribution tool's numbers
@@ -177,8 +201,9 @@ A findings list, one line per checklist item, FAIL/pass/blocked with the
 confidence level and, for every fail, the evidence and which guardrail or
 rule it violates. Close with a short "what this account needs before
 anything else" list, ranked by what's actually broken, not by
-convenience. A fix that changes the optimisation event (promoting a
-different conversion action to Primary) is a question for the owner,
+convenience. A fix that changes the optimisation event (a different
+Primary action, or for an App campaign a switch from Target CPI to tCPA
+on an in-app action) is a question for the owner,
 with that action's recent volume per campaign stated, because it resets
 learning and may not have enough volume to bid on. Never propose a
 budget change or a launch from an audit, an audit's job stops at

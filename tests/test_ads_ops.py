@@ -37,6 +37,8 @@ class AdsOpsCase(unittest.TestCase):
     def run_ops(self, *args, stdin=None, **extra_env):
         env = dict(os.environ, PYTHONIOENCODING='utf-8', **extra_env)
         env.pop('ADS_OPS_ROOT', None)
+        if 'ADS_OPS_ACTOR' not in extra_env:
+            env.pop('ADS_OPS_ACTOR', None)
         return subprocess.run([sys.executable, '-I', os.path.join(self.ops, 'ads_ops.py'), *args],
                               input=stdin, capture_output=True, text=True, encoding='utf-8',
                               cwd=self.root, env=env)
@@ -417,6 +419,111 @@ class TestVersions(AdsOpsCase):
         r = self.run_ops('restore', self.agent, '19990101-000000')
         self.assertEqual(r.returncode, 1)
         self.assertIn('no version', r.stderr)
+
+
+class TestSelfApproval(AdsOpsCase):
+    """Bug: the agent that wrote a row could approve it itself through the shell.
+    The script now records who created the row and refuses the same name on approve.
+    This guards against accidents, not against an agent that lies about its name."""
+
+    def add_as(self, actor=None, by=None):
+        args = list(self.LEDGER_OK) + (['--by', by] if by else [])
+        env = {'ADS_OPS_ACTOR': actor} if actor else {}
+        self.assertClean(self.run_ops(*args, **env))
+        return self.ledger()[-1]
+
+    def test_creator_is_recorded_from_env_or_by(self):
+        self.assertEqual(self.add_as(actor='google-ads-agent')['created_by'], 'google-ads-agent')
+        self.assertEqual(self.add_as(by='meta agent')['created_by'], 'meta agent')
+        self.assertEqual(self.add_as()['created_by'], '')
+
+    def test_creator_cannot_approve_own_row(self):
+        eid = self.add_as(actor='google-ads-agent')['id']
+        r = self.run_ops('ledger', 'approve', eid, '--by', 'Google-Ads-Agent')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('created', r.stderr)
+        self.assertEqual(self.ledger()[0]['status'], 'planned')
+
+    def test_creator_session_cannot_approve_under_another_name(self):
+        eid = self.add_as(actor='google-ads-agent')['id']
+        r = self.run_ops('ledger', 'approve', eid, '--by', 'Owner', ADS_OPS_ACTOR='google-ads-agent')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self.ledger()[0]['status'], 'planned')
+
+    def test_someone_else_can_approve(self):
+        eid = self.add_as(actor='google-ads-agent')['id']
+        self.assertClean(self.run_ops('ledger', 'approve', eid, '--by', 'Owner'))
+        self.assertEqual(self.ledger()[0]['status'], 'approved')
+
+
+class TestFailedReadBack(AdsOpsCase):
+    """Bug: a `done` row whose read-back failed could be neither rolled back nor cancelled."""
+
+    def done_row(self):
+        self.assertClean(self.run_ops(*self.LEDGER_OK))
+        eid = self.ledger()[0]['id']
+        self.assertClean(self.run_ops('ledger', 'approve', eid, '--by', 'Owner'))
+        self.assertClean(self.run_ops('ledger', 'done', eid))
+        return eid
+
+    def test_done_can_be_marked_failed_and_stays_open(self):
+        eid = self.done_row()
+        self.assertClean(self.run_ops('ledger', 'failed', eid))
+        self.assertEqual(self.ledger()[0]['status'], 'failed')
+        self.assertIn(eid, self.run_ops('ledger', 'list', '--open').stdout)
+        self.assertIn('read-back failed', self.run_ops('due', '--quiet').stdout)
+
+    def test_failed_row_can_be_rolled_back_or_cancelled(self):
+        eid = self.done_row()
+        self.run_ops('ledger', 'failed', eid)
+        self.assertClean(self.run_ops('ledger', 'rolled-back', eid))
+        self.assertEqual(self.ledger()[0]['status'], 'rolled_back')
+
+    def test_failed_row_that_never_applied_can_be_cancelled(self):
+        eid = self.done_row()
+        self.run_ops('ledger', 'failed', eid)
+        self.assertClean(self.run_ops('ledger', 'cancel', eid))
+        self.assertEqual(self.ledger()[0]['status'], 'cancelled')
+
+    def test_done_can_be_rolled_back_directly(self):
+        eid = self.done_row()
+        self.assertClean(self.run_ops('ledger', 'rolled-back', eid))
+        self.assertEqual(self.ledger()[0]['status'], 'rolled_back')
+
+    def test_failed_needs_a_done_row(self):
+        self.assertClean(self.run_ops(*self.LEDGER_OK))
+        eid = self.ledger()[0]['id']
+        self.assertEqual(self.run_ops('ledger', 'failed', eid).returncode, 1)
+
+
+class TestVersionIndexLock(AdsOpsCase):
+    """Bug: the version index was appended to without a lock, so two snapshots at
+    the same moment could interleave their writes."""
+
+    def test_snapshot_waits_for_the_index_lock(self):
+        import subprocess as sp
+        import time
+        d = os.path.join(self.root, '.versions', '.claude', 'agents', 'google-ads.md')
+        os.makedirs(d)
+        lock = os.path.join(d, '.index.lock')
+        with open(lock, 'w') as f:
+            f.write('held by the test')
+        env = dict(os.environ, PYTHONIOENCODING='utf-8')
+        p = sp.Popen([sys.executable, '-I', os.path.join(self.ops, 'ads_ops.py'), 'snapshot', self.agent],
+                     cwd=self.root, env=env, stdout=sp.PIPE, stderr=sp.PIPE)
+        try:
+            time.sleep(1.0)
+            self.assertIsNone(p.poll(), 'snapshot did not wait for the lock')
+            os.unlink(lock)
+            out, err = p.communicate(timeout=30)
+        finally:
+            if p.poll() is None:
+                p.kill()
+                p.communicate()
+        self.assertEqual(p.returncode, 0, err)
+        with open(os.path.join(d, 'index.jsonl'), encoding='utf-8') as f:
+            self.assertEqual(len([l for l in f if l.strip()]), 1)
+        self.assertFalse(os.path.exists(lock))
 
 
 class TestShippedFiles(unittest.TestCase):

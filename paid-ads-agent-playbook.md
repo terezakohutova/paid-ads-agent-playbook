@@ -171,7 +171,11 @@ marked "check" below points at the official page to confirm before you build._
   - Watch for gaps in the data before concluding anything: a new or imported
     conversion action does not always land with the Primary/Secondary status (Google)
     or the event mapping (Meta) you intended, so read the status instead of assuming
-    it. Only Primary actions feed bidding. Cross-check attribution-tool spend/conversion numbers against the ad
+    it. On campaigns that use the account-default goals (Search, PMax), only
+    Primary actions feed bidding. App campaigns are different: the campaign's own
+    bidding decides what they optimise for (Target CPI = installs, whatever the
+    Primary/Secondary status of a deeper action; tCPA on a chosen in-app action, or
+    tROAS, to optimise on that event). Cross-check attribution-tool spend/conversion numbers against the ad
     platform's own report before trusting either one blindly; cost-import bugs
     between platforms and attribution tools are common enough to check for.
   - **Optimizing on a proxy event is a decision for the budget owner, not a
@@ -291,7 +295,23 @@ from the settings I can see" is not a pass: an assumption is blocked, and a bloc
 item is unscored, not failed. The bold labels are the same in the `google-ads` agent
 file (a test keeps them in sync).
 - [ ] **Conversion actions**: category, count setting (every vs. one), attribution
-      model, primary vs. secondary status; which action the account actually bids on
+      model, primary vs. secondary status; which action each campaign actually bids
+      on. Primary/Secondary drives campaigns on account-default goals (Search, PMax);
+      an App campaign on Target CPI optimises for installs whatever the status of a
+      deposit or purchase action, so there the lever is the campaign's bidding (tCPA
+      on the in-app value event, or tROAS), not the goal status
+- [ ] **Budget vs. target**: App campaign daily budget at least ~50x the target CPI
+      for install campaigns, at least ~10-15x the target CPA for in-app action
+      campaigns (Google's App campaign guidance at the time of writing); below
+      that the campaign cannot get enough conversions a day to learn
+- [ ] **Location targeting option**: "Presence" (people in or regularly in the
+      market) rather than the default "Presence or interest", unless reaching
+      people outside the market was decided
+- [ ] **Search network settings**: Search Partners and Display Network expansion on
+      Search campaigns off unless someone decided otherwise and the results justify it
+- [ ] **Advertiser verification**: advertiser identity verification done; for
+      financial products, Google's financial services verification for every market
+      where the policy requires it
 - [ ] **Duplicate counting**: the same conversion not counted twice (e.g. an SDK and
       an MMP install action both Primary)
 - [ ] **Enhanced conversions**: enabled where the account has web conversions, no
@@ -313,6 +333,9 @@ file (a test keeps them in sync).
       campaign can carry outdated positioning that a structural rebuild never touched
 - [ ] **Compliance**: no restricted claims for the vertical (guardrail 4), no claim
       or mechanic copied between markets without its own check (guardrails 9, 10)
+- [ ] **Currency vs. market**: prices in the copy are in the market's currency
+      (CZK in CZ, PLN in PL), and an account currency that differs from the market
+      is a recorded decision
 - [ ] **Asset names**: English tokens per the naming convention (hygiene, low
       severity)
 - [ ] **Attribution cross-check**: the attribution tool's numbers against the
@@ -337,7 +360,11 @@ file (a test keeps them in sync).
 - Sets up: the MMP link shared into **every** sub-account under the manager account
   (otherwise installs land in "Organic"); conversion actions imported from the MMP,
   Primary only for the optimization target, no auto-created duplicate "Install"
-  action. Changing Primary resets learning.
+  action. Changing Primary resets learning. For App campaigns the optimisation
+  target is set in the campaign's bidding (tCPA on the in-app value event, or
+  tROAS), not by the goal status: a Target CPI campaign keeps optimising for
+  installs. Daily budget at least ~50x target CPI, or ~10-15x target CPA for
+  in-app actions.
 - Requests: **EEA consent from the app** via the MMP's third-party sharing API with
   the `google_dma` parameters (`eea`, `ad_personalization`, `ad_user_data`), not web
   consent mode, or Google limits EEA features and deep-event campaigns starve; **iOS
@@ -444,7 +471,9 @@ person/session may touch the same account. Only flip after an explicit "go."
 - **Learning hygiene** (at low volume more important than anything else): before ~100
   conversions don't change goal, optimization event, conversion action or geo, and
   don't cycle bids. A different optimization event = a new campaign, not an edit.
-  Budget/target changes max ~20 % per 48-72 h.
+  Budget/target changes max ~20 % per 48-72 h (a rule of thumb, not a platform
+  limit; Meta's step below is slower because a large edit there can send an ad
+  set back into learning, which is judged on about 7 days of events).
 - **Automation risks**: automatically created assets moving into AI Max, auto-apply
   recommendations and automated promotions can change the account without anyone
   clicking. Check account-level opt-outs, filter change history by "auto-applied",
@@ -528,8 +557,11 @@ Ad account:
 - [ ] **Learning phase**: ad sets stuck in "Learning limited", and why
 - [ ] **Frequency and fatigue**: frequency per audience type against the Phase 7
       ranges, with CTR and CPM trends as diagnostics
-- [ ] **Audience exclusions**: existing users/converters excluded, no avoidable
-      overlap between ad sets
+- [ ] **Audience exclusions**: existing users/converters excluded where the
+      campaign type allows it; Advantage+ app campaigns handle install exclusion
+      automatically, so there an empty exclusion list is a consistency check, not a
+      confirmed waste (verify against Meta's current docs); no avoidable overlap
+      between manually targeted ad sets
 - [ ] **Attribution settings**: the same attribution setting across ad sets you
       compare, and no comparison across the 2026-01-12 window removal
 - [ ] **Budget pacing**: spend vs. plan and vs. the ceiling in `goals.md`
@@ -539,6 +571,9 @@ Ad account:
 - [ ] **Compliance**: special ad category and restricted claims (guardrail 4), no
       claim or mechanic copied between markets without its own check (guardrails
       9, 10)
+- [ ] **Advantage+ creative enhancements**: automatic text variations, music,
+      image edits and expansions off for a regulated advertiser unless compliance
+      agreed: they change approved copy and visuals after review
 - [ ] **Asset names**: English tokens per the naming convention (hygiene, low
       severity)
 
@@ -579,7 +614,9 @@ Ad account:
 ### Phase 2: Targeting and audience strategy
 - Automated/broad campaign types (e.g. "Advantage+"-style) don't take manual
   targeting, your real levers are audience *signals* (seed audience) and
-  *exclusions*. Always exclude existing installed users/converters.
+  *exclusions*. Exclude existing users/converters where the campaign type allows
+  it; Advantage+ app campaigns handle install exclusion automatically (check
+  Meta's current docs for your campaign type).
 - Custom audiences/lookalikes are a signal input to automated expansion, not a hard
   fence. Under a **special ad category** (Meta's term; financial products and
   services became one in the US in January 2025, other regions differ), lookalike
@@ -591,8 +628,10 @@ Ad account:
   restricts detailed targeting and its exclusions. Customer-list custom audiences
   are, per Meta's docs at the time of writing, still allowed. Rules differ by region
   and change; the docs, not this list, decide.
-- Geo-targeting for offline/local campaigns is generally not subject to the same
-  restriction, radius targeting from roughly city to metro scale.
+- The special ad category limits apply to every ad in the category, whatever the
+  campaign's purpose or objective: an "offline" or local campaign for the same
+  product gets the same limits (no postal code targeting, a minimum radius of
+  about 15 miles / 25 km around a location, the full age range, no gender).
 
 ### Phase 3: Campaign structure
 - Consolidate: 2-4 campaigns per account, 1-2 broad ad sets per campaign, **3-6 ads
@@ -648,7 +687,10 @@ placement before building, the table is for layout decisions, not limits.
 - [ ] UTM/destination URL checked before publishing: editing URL parameters on a
       live ad sends it back to review and can restart learning, so in practice a
       rename means duplicating the ad
-- [ ] Audience overlap checked (>25% → fix via exclusions)
+- [ ] Audience overlap checked for manually targeted ad sets (>25% → fix via
+      exclusions or consolidation; a rule of thumb). Advantage+ audiences expand
+      past their suggestions by design, so overlap between them is expected and
+      the fix is fewer ad sets, not exclusions
 - [ ] Compliance + restricted-category rules respected
 - [ ] English asset names
 - [ ] Known-UI-bugs doc reviewed
@@ -662,9 +704,10 @@ since the plan was made. Only publish after an explicit "go," ad set by ad set,
 checking for other people's broken drafts before each step.
 
 ### Phase 7: Ongoing optimization
-- **Frequency/fatigue**: prospecting gets risky above ~2.5, drops off above ~4.0;
+- **Frequency/fatigue** (practitioner rules of thumb, not Meta guidance; calibrate
+  on your own account): prospecting gets risky above ~2.5, drops off above ~4.0;
   retargeting is safe to ~4-6, drops off above ~7-8
-- **Refresh signal (diagnostic, combined)**: frequency >3.5 (7-day) **and** CTR
+- **Refresh signal (diagnostic, combined, rule of thumb)**: frequency >3.5 (7-day) **and** CTR
   -25 % **and** CPM +35 % = the creative is likely burned out, so new creative goes
   into production. A 15-20 % CTR drop over 7-14 days means start preparing a refresh
   early. These signals decide what creative work to do next; whether to pause, scale
@@ -672,7 +715,8 @@ checking for other people's broken drafts before each step.
   guardrail 8). Cadence: cold audiences every 2-3 weeks, retargeting every 1-2
   weeks.
 - **Budget rebalancing**: weekly, not daily
-- **Budget changes**: max 15-20 % once every 3-4 days, judge after 5-7 days, and
+- **Budget changes**: max 15-20 % once every 3-4 days (rule of thumb; slower than
+  Google because a significant edit can restart learning), judge after 5-7 days, and
   after every change check the ad set's activity history to confirm the edit actually
   saved
 - **No cost caps at low volume**: lowest cost; a cap 20-30 % above target only after
@@ -757,7 +801,11 @@ working files are in [`ads-ops/`](ads-ops/README.md).
   (`--review-by`). The owner approves it with `ledger approve <id> --by <name>`, a
   separate command the agents are told never to run. The script enforces the order
   planned → approved → done → verified → kept / rolled back: no `done` before an
-  approval, no `verify` before `done`. Verified rows whose review date has passed
+  approval, no `verify` before `done`. A read-back that does not match is
+  `ledger failed`, which can then be rolled back (or cancelled if nothing applied).
+  The row records who wrote it, and `approve` is refused under that same name: a
+  guard against an agent approving its own row by accident, not against one that
+  is determined to. Verified rows whose review date has passed
   show up in `due` until someone keeps or rolls them back. `ledger rollback <id>`
   prints the way back, which is itself a new, approved, ledgered change.
 - **What the script enforces and what it doesn't.** It enforces the ledger's own
@@ -788,7 +836,9 @@ working files are in [`ads-ops/`](ads-ops/README.md).
 - **Language gate.** Every ad text in every language passes a spelling and grammar
   check (`ads-ops/langcheck_ads.py`: Hunspell with LibreOffice dictionaries, a local
   LanguageTool server, and with `--online` Korektor for Czech) before upload; exit 1
-  = findings, exit 3 = some text was not checked by every tool that ran; either way
+  = findings, exit 3 = some text was not checked by every requested layer (a
+  LanguageTool outage means grammar was not checked at all; Czech without
+  `--online` has no grammar layer); either way
   it is not uploaded. The tools don't judge tone or claims, so a person still reads
   it.
 - **Weekly radar.** An optional scheduled, read-only routine scans the watchlist

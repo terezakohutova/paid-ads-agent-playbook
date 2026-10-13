@@ -1,7 +1,7 @@
 {
- "about": "Planted issues in sample-client/tallo, one id per issue. Written with the data, before any blind run was scored. Each issue is discoverable only by reading the exports (often by joining two of them); the notes columns are neutral. 'checklist' is the Phase 0 label that should catch it.",
+ "about": "Planted issues in sample-client/tallo, one id per issue, plus issues found by review (marked origin). Written with the data, before any blind run was scored. Each issue is discoverable only by reading the exports (often by joining two of them); the notes columns are neutral. 'checklist' is the Phase 0 label that should catch it.",
  "google": [
-  {"id": "G1", "checklist": "Conversion actions", "issue": "The value event First Deposit is Secondary in CZ and SK; the account bids on installs (and CZ web sign-up)", "evidence": "conversion-actions.csv + client-facts.csv value_event"},
+  {"id": "G1", "checklist": "Conversion actions", "issue": "Nothing bids on the value event First Deposit: the CZ and SK App campaigns run Target CPI, which optimises for installs whatever First Deposit's Primary/Secondary status (CZ Search and PMax bid on Primary Web sign-up). The lever is the App campaign's bidding (tCPA on First Deposit as an in-app action, or tROAS), not the goal status. Corrected 2026-10-13: the original key said the problem was First Deposit being Secondary.", "evidence": "campaigns.csv bid_strategy + conversion-actions.csv + client-facts.csv value_event"},
   {"id": "G2", "checklist": "Conversion actions", "issue": "PL has no First Deposit conversion action at all", "evidence": "conversion-actions.csv"},
   {"id": "G3", "checklist": "Duplicate counting", "issue": "PL counts installs twice: Install (MMP) and first_open (Firebase) both Primary", "evidence": "conversion-actions.csv"},
   {"id": "G4", "checklist": "Consent signals", "issue": "PL app conversions carry EEA consent signals on 0% of conversions", "evidence": "account-settings.csv"},
@@ -16,7 +16,9 @@
   {"id": "G13", "checklist": "Compliance", "issue": "The guaranteed-return line was copied into PL (guardrail 9)", "evidence": "ads.csv"},
   {"id": "G14", "checklist": "Compliance", "issue": "The prize-draw mechanic was copied from SK into PL without a local check (guardrail 10)", "evidence": "ads.csv"},
   {"id": "G15", "checklist": "Attribution cross-check", "issue": "PL: 655 Google installs vs 44 in the MMP, with MMP organic up from 720 to 1,310", "evidence": "attribution-check.csv"},
-  {"id": "G16", "checklist": "Asset names", "issue": "Polish token dowod_spoleczny in a PL campaign and ad group name (hygiene)", "evidence": "campaigns.csv + ads.csv"}
+  {"id": "G16", "checklist": "Asset names", "issue": "Polish token dowod_spoleczny in a PL campaign and ad group name (hygiene)", "evidence": "campaigns.csv + ads.csv"},
+  {"id": "G17", "checklist": "Budget vs. target", "origin": "found by review 2026-10-13, not planted", "issue": "All four enabled Target CPI App campaigns have a daily budget under 50x their target CPI (CZ 150 vs 190, SK 70 vs 160, PL 90 and 50 vs 145), Google's minimum for install campaigns", "evidence": "campaigns.csv rows CZ_APP_acq_install_2505, SK_APP_acq_promo_2508, PL_APP_acq_promo_2509, PL_APP_acq_dowod_spoleczny_2509"},
+  {"id": "G18", "checklist": "Currency vs. market", "origin": "found by review 2026-10-13, not planted", "issue": "The CZ brand ad quotes the price in euro (1,99 EUR mesicne) in a CZK market", "evidence": "ads.csv CZ_SEARCH_brand_core_2503 description"}
  ],
  "meta": [
   {"id": "M1", "checklist": "Roles", "issue": "The Tallo CZ portfolio has a single admin", "evidence": "people.csv"},
@@ -26,7 +28,7 @@
   {"id": "M5", "checklist": "Measurement and event match quality", "issue": "first_deposit (the value event) is not mapped to a standard event; every ad set optimizes on installs", "evidence": "events.csv + ad-sets.csv + client-facts.csv"},
   {"id": "M6", "checklist": "Structure and fragmentation", "issue": "SK: six ad sets at EUR 8/day, all Learning limited", "evidence": "ad-sets.csv"},
   {"id": "M7", "checklist": "Frequency and fatigue", "issue": "CZ winter ad set at frequency 5.6 with CTR halved and CPM up", "evidence": "ad-sets.csv"},
-  {"id": "M8", "checklist": "Audience exclusions", "issue": "PL promo Android ad set does not exclude existing users", "evidence": "ad-sets.csv"},
+  {"id": "M8", "checklist": "Audience exclusions", "issue": "PL promo Android excludes nobody while every other ad set excludes existing users. It is an Advantage+ app campaign optimising for installs, where Meta handles install exclusion itself, so this is a consistency check of low severity, not confirmed wasted spend. Reworded 2026-10-13: the original key treated it as a clear waste.", "evidence": "ad-sets.csv"},
   {"id": "M9", "checklist": "Compliance", "issue": "PL ad promises a guaranteed 8 % yearly return", "evidence": "ads.csv"},
   {"id": "M10", "checklist": "Change history", "issue": "PL budget 40 to 100 (+150 %) with no ledger row and far over the ~20 % step", "evidence": "activity-history.csv vs change-ledger.csv"},
   {"id": "M11", "checklist": "Attribution settings", "issue": "One CZ ad set on 1-day click, the rest on 7-day click", "evidence": "ad-sets.csv"},

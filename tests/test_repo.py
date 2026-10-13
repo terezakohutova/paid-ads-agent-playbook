@@ -145,6 +145,13 @@ class TestSampleClient(unittest.TestCase):
         admins = [r for r in self.rows('meta', 'people.csv')
                   if r['portfolio'] == 'Tallo CZ' and r['role'].startswith('Full control')]
         self.assertEqual(len(admins), 1)                                                   # M1
+        under = sorted(r['campaign'] for r in self.rows('google', 'campaigns.csv')
+                       if r['status'] == 'Enabled' and r['bid_strategy'] == 'Target CPI'
+                       and float(r['budget_eur_day']) < 50 * float(r['target_eur']))
+        self.assertEqual(under, ['CZ_APP_acq_install_2505', 'PL_APP_acq_dowod_spoleczny_2509',
+                                 'PL_APP_acq_promo_2509', 'SK_APP_acq_promo_2508'])        # G17 (review)
+        cz_ads = [r['text'] for r in self.rows('google', 'ads.csv') if r['account'] == 'CZ']
+        self.assertTrue(any('€' in t for t in cz_ads))                                     # G18 (review)
 
     def test_answer_key_ids_are_unique_and_cover_checklist_labels(self):
         key = json.loads(read(os.path.join(SAMPLE, 'answer-key.json')))

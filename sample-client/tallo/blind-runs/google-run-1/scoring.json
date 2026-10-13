@@ -3,7 +3,7 @@
  "scored_by": "the repo author, by hand, after the run; every excerpt is a verbatim quote from output.md (a test checks this)",
  "unit": "one FAIL finding: a distinct problem the run marked FAIL, wherever it sits in the output",
  "findings": [
-  {"excerpt": "The value event **First Deposit (MMP)** is **Secondary** in CZ (38 conv/30d) and SK (9 conv/30d)", "label": "G1"},
+  {"excerpt": "No account bids on the value event.", "label": "G1", "note": "Re-scored 2026-10-13 against the corrected G1. Counted as found: the run states that nothing bids on First Deposit and that the app campaign optimises on installs. But it blames the Secondary status, so the fix it points at (promote to Primary) would not change a Target CPI campaign. Not counted: G17, G18, added to the key after the run."},
   {"excerpt": "**missing in PL** (no action in the export)", "label": "G2"},
   {"excerpt": "PL has two Primary Download actions for the same event", "label": "G3"},
   {"excerpt": "ad_user_data / ad_personalization present on **0%** of app conversions", "label": "G4"},
@@ -23,5 +23,6 @@
  "not_counted": [
   {"excerpt": "Question for the owner: was \"kept\" based on evidence?", "why": "The CZ ledger row (meant as a clean control) is questioned, but marked blocked, not FAIL. The question is fair: see the answer key's note on this row."},
   {"excerpt": "Currency EUR in CZ and PL (CZK/PLN markets)", "why": "Raised as a question, not a FAIL; a fair one."}
- ]
+ ],
+ "rescored": "2026-10-13: G1 corrected (wrong lever in the original key); G17 and G18 added to the key from review; see answer-key.md"
 }

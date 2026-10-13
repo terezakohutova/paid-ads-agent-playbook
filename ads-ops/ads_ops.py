@@ -15,12 +15,15 @@ project root:
         --object MKA_acq_example_2610_ios --field "daily budget" \\
         --before "300/day" --after "345/day" --why "best cost per activation, 7 days" \\
         --rollback-if "cost per activation > 20 after 7 days" --review-by 2026-10-20
+    # who wrote the row is recorded as created_by: set ADS_OPS_ACTOR in the agent's
+    # environment (e.g. ADS_OPS_ACTOR=google-ads-agent) or pass --by "<name>" on add.
     # the OWNER approves it, in their own terminal (agents never run this):
-    python -I ads-ops/ads_ops.py ledger approve <id> --by "owner name"
+    python -I ads-ops/ads_ops.py ledger approve <id> --by "owner name"   # refused if the name = created_by
     python -I ads-ops/ads_ops.py ledger done <id>       # after the change (refused before approval)
     python -I ads-ops/ads_ops.py ledger verify <id>     # after the reload read-back (refused before done)
-    python -I ads-ops/ads_ops.py ledger keep <id> | rolled-back <id>   # at the review date
-    python -I ads-ops/ads_ops.py ledger cancel <id>     # a planned/approved change that will not happen
+    python -I ads-ops/ads_ops.py ledger failed <id>     # the read-back does not show the new value
+    python -I ads-ops/ads_ops.py ledger keep <id> | rolled-back <id>   # at the review date (rolled-back also from done/failed)
+    python -I ads-ops/ads_ops.py ledger cancel <id>     # planned/approved and will not happen, or failed and never applied
     python -I ads-ops/ads_ops.py ledger rollback <id>   # prints the exact way back
     python -I ads-ops/ads_ops.py ledger list [--open]
 
@@ -30,10 +33,14 @@ project root:
     python -I ads-ops/ads_ops.py restore <file> <version>   # snapshots the current file first
 
 What is enforced here: the ledger's own bookkeeping (required fields, the status
-order planned > approved > done > verified > kept/rolled_back, an approval that is
-recorded by a separate command with a name and a timestamp). What is NOT: nothing
-here touches or watches an ad account, so it cannot stop a change made in the UI
-without a row, and it cannot prove who ran `approve`. Those parts are procedure.
+order planned > approved > done > verified > kept/rolled_back, with done > failed for a
+read-back that did not match, an approval that is recorded by a separate command with
+a name and a timestamp, and an approval refused when the approver's name, or the
+ADS_OPS_ACTOR of the shell running it, equals the row's created_by). That last check is
+a guard against accidents (an agent approving its own row out of habit), NOT against a
+determined agent: anyone with a shell can pass another name. What is NOT enforced:
+nothing here touches or watches an ad account, so it cannot stop a change made in the
+UI without a row, and it cannot prove who ran `approve`. Those parts are procedure.
 """
 import datetime as dt
 import hashlib
@@ -70,11 +77,12 @@ TRANSITIONS = {
     'approve': ({'planned'}, 'approved'),
     'done': ({'approved'}, 'done'),
     'verify': ({'done'}, 'verified'),
+    'failed': ({'done'}, 'failed'),                          # read-back does not show the new value
     'keep': ({'verified'}, 'kept'),
-    'rolled-back': ({'verified'}, 'rolled_back'),
-    'cancel': ({'planned', 'approved'}, 'cancelled'),
+    'rolled-back': ({'verified', 'done', 'failed'}, 'rolled_back'),
+    'cancel': ({'planned', 'approved', 'failed'}, 'cancelled'),   # failed: only if it never applied
 }
-OPEN_STATUSES = ('planned', 'approved', 'done', 'verified')
+OPEN_STATUSES = ('planned', 'approved', 'done', 'failed', 'verified')
 
 
 def protected():
@@ -215,6 +223,7 @@ def ledger_summary(entries):
         'waiting for the owner\'s approval': [e for e in entries if e['status'] == 'planned'],
         'approved, not made yet': [e for e in entries if e['status'] == 'approved'],
         'made, waiting for read-back': [e for e in entries if e['status'] == 'done'],
+        'read-back failed (roll back, or cancel if it never applied)': [e for e in entries if e['status'] == 'failed'],
     }
     reviews = [e for e in entries if review_overdue(e)]
     return waiting, reviews
@@ -386,6 +395,7 @@ def cmd_ledger(args):
             'before': opt(rest, 'before'), 'after': opt(rest, 'after'),
             'why': opt(rest, 'why', False), 'rollback_if': opt(rest, 'rollback-if'),
             'review_by': review_by, 'snapshot': opt(rest, 'snapshot', False),
+            'created_by': (opt(rest, 'by', False) or os.environ.get('ADS_OPS_ACTOR', '')).strip(),
         }
         with Lock():
             entries = read_ledger()
@@ -418,12 +428,19 @@ def cmd_ledger(args):
             if e['status'] not in allowed:
                 hint = {'done': 'it needs the owner\'s approval first (ledger approve <id> --by <name>)',
                         'verify': 'mark it done first, after the change is made',
-                        'keep': 'verify it first', 'rolled-back': 'verify it first'}.get(sub, '')
+                        'failed': 'mark it done first; failed is for a read-back that did not match',
+                        'keep': 'verify it first', 'rolled-back': 'it must be done, failed or verified'}.get(sub, '')
                 raise SystemExit(f"{e['id']} is {e['status']}; `ledger {sub}` needs status "
                                  f"{' or '.join(sorted(allowed))}" + (f': {hint}' if hint else ''))
             if sub == 'approve':
                 if not by.strip():
                     raise SystemExit('--by needs the approver\'s name')
+                creator = (e.get('created_by') or '').strip().lower()
+                actor = os.environ.get('ADS_OPS_ACTOR', '').strip().lower()
+                if creator and creator in (by.strip().lower(), actor):
+                    raise SystemExit(f"{e['id']} was created by {e['created_by']}; the same name cannot approve it. "
+                                     'The owner approves in their own terminal (this check prevents accidents, '
+                                     'it cannot stop someone passing a different name).')
                 e['approved_by'], e['approved_at'] = by.strip(), now()
             e['status'] = new
             e.setdefault('history', []).append([now(), new] + ([by] if by else []))
@@ -494,6 +511,12 @@ def snapshot(path, reason='manual'):
         return None
     d = version_dir(r)
     os.makedirs(d, exist_ok=True)
+    # one lock per versioned file (the ledger lock may already be held by the caller, cmd_done)
+    with Lock(os.path.join(d, '.index.lock')):
+        return _snapshot_locked(path, d, reason)
+
+
+def _snapshot_locked(path, d, reason):
     ext = os.path.splitext(path)[1]
     existing = version_list(d, ext)
     if existing and sha(os.path.join(d, existing[-1])) == sha(path):
@@ -555,7 +578,7 @@ def cmd_hook_snapshot(args):
             r = rel(path)
             if r and any(re.match(p, r) for p in protected()):
                 snapshot(path, reason=f"before {data.get('tool_name', 'edit')}")
-    except Exception:
+    except (Exception, SystemExit):                          # a lock timeout must not block the edit either
         pass
     return 0
 

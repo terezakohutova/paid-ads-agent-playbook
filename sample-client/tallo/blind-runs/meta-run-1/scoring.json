@@ -9,9 +9,8 @@
   {"excerpt": "Two sources for one event, likely double-counted or at least not deduplicated.", "label": "M4"},
   {"excerpt": "`first_deposit` (63 events in 7d) is \"Not mapped (custom event)\"", "label": "M5"},
   {"excerpt": "Consolidation is the finding (hooks are better tested as ads inside fewer ad sets)", "label": "M6"},
-  {"excerpt": "All six SK ad sets are \"Learning limited\"", "label": "M6", "note": "Same planted issue as the line above (fragmentation causes learning limited); counted once for recall, and as a matching finding for precision."},
   {"excerpt": "Frequency 5.6 over 7d, above the ~4 drop-off line.", "label": "M7"},
-  {"excerpt": "`PL_acq_promo_2509_android` (EUR 100/day, the biggest ad set in the account) has an empty `excluded_audiences`", "label": "M8"},
+  {"excerpt": "`PL_acq_promo_2509_android` (EUR 100/day, the biggest ad set in the account) has an empty `excluded_audiences`", "label": "M8", "note": "M8 reworded 2026-10-13: for an Advantage+ app install campaign Meta handles install exclusion itself, so this is a low-severity consistency check. The run matches the planted item but rates it high."},
   {"excerpt": "A guaranteed return on ETF portfolios is a restricted, almost certainly false financial claim (guardrail 4)", "label": "M9"},
   {"excerpt": "(b) 2026-10-01 PL android EUR 40 to 100 (+150 %) by Marek (advertiser): no ledger row", "label": "M10"},
   {"excerpt": "`CZ_acq_winter_2510_android` is \"1-day click\", every other ad set is \"7-day click\"", "label": "M11"},
@@ -20,7 +19,9 @@
   {"excerpt": "The same ad also runs a prize draw (iPhone 17, registration until 31.10) for a financial product.", "label": "extra-valid", "note": "Present in the data (the PL ad text) but not in the Meta key; a fair compliance flag."}
  ],
  "not_counted": [
+  {"excerpt": "All six SK ad sets are \"Learning limited\"", "why": "Same planted issue as the M6 finding (fragmentation causes Learning limited). Counted once since 2026-10-13; it was counted twice for precision before."},
   {"excerpt": "**Risk warning missing.**", "why": "Raised inside the compliance detail as a question for a compliance call, not as its own FAIL."},
   {"excerpt": "**Licence vs advertiser:**", "why": "Marked blocked (a legal question)."}
- ]
+ ],
+ "rescored": "2026-10-13: M6 counted once; M8 reworded; see answer-key.md"
 }

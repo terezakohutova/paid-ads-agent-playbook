@@ -55,7 +55,12 @@ If `ads-ops/` exists in this project (see [`ads-ops/README.md`](../../ads-ops/RE
   `ledger verify`. At the review date: report the numbers and let the owner decide
   keep or roll back. When the run is finished: `ads_ops.py done <task-id>`.
 - Every ad text goes through `ads-ops/langcheck_ads.py` before upload; exit 1
-  (findings) and exit 3 (not every text checked) both mean "do not upload".
+  (findings) and exit 3 (not every text checked, e.g. grammar not checked because
+  LanguageTool was down) both mean "do not upload".
+- Run ledger commands with `ADS_OPS_ACTOR` set to your agent name, so the row
+  records you as its creator and `approve` under your name is refused. If the
+  read-back after a change does not match, mark the row `ledger failed <id>` and
+  report; the owner decides the rollback.
 - Without shell access (the default `tools:` above), hand these commands to the
   main session instead of skipping them.
 
@@ -165,11 +170,14 @@ Ad account:
   days, or consolidation is the finding.
 - **Learning phase**: ad sets stuck in "Learning limited", and why
   (budget, fragmentation, a rare optimization event).
-- **Frequency and fatigue**: prospecting gets risky above about 2.5 and
-  drops off above about 4 (7-day); CTR and CPM trends are diagnostics for
+- **Frequency and fatigue**: as a rule of thumb, prospecting gets risky
+  above about 2.5 and drops off above about 4 (7-day); CTR and CPM trends are diagnostics for
   creative work, not grounds to pause or scale (guardrail 8).
-- **Audience exclusions**: existing users/converters excluded; no
-  avoidable overlap between ad sets.
+- **Audience exclusions**: existing users/converters excluded where the
+  campaign type allows it; Advantage+ app campaigns handle install
+  exclusion automatically, so there an empty list is a consistency
+  check, not a confirmed waste. No avoidable overlap between manually
+  targeted ad sets.
 - **Attribution settings**: the same attribution setting across ad sets
   you compare.
 - **Budget pacing**: spend against plan and against any ceiling you were
@@ -181,6 +189,9 @@ Ad account:
 - **Compliance**: special ad category and restricted claims for the
   vertical (guardrail 4); no claim or mechanic copied between markets
   without its own check (guardrails 9, 10).
+- **Advantage+ creative enhancements**: automatic text variations,
+  music, image edits and expansions off for a regulated advertiser unless
+  compliance agreed; they change approved copy after review.
 - **Asset names**: English tokens per the naming convention. Hygiene, low
   severity.
 
