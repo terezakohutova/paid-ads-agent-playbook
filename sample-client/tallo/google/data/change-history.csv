@@ -1,0 +1,5 @@
+date_time,account,user,campaign,change
+2026-09-15 10:12,CZ,owner@tallo.example,CZ_APP_acq_install_2505,Budget changed from EUR 125.00/day to EUR 150.00/day
+2026-09-22 03:41,PL,Recommendations (auto-applied),PL_APP_acq_promo_2509,Budget changed from EUR 60.00/day to EUR 90.00/day
+2026-09-29 04:05,PL,Recommendations (auto-applied),PL_SEARCH_brand_core_2509,"Added 6 broad match keywords (inwestowanie, oszczędzanie, lokata, ...)"
+2026-10-02 16:30,SK,marek@tallo.example,SK_APP_acq_promo_2508,Budget changed from EUR 35.00/day to EUR 70.00/day

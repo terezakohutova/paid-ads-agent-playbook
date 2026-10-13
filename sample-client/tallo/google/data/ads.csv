@@ -1,0 +1,17 @@
+account,campaign,ad_group,asset_type,text,approval_status
+CZ,CZ_SEARCH_brand_core_2503,brand,Headline,Tallo: investování v aplikaci,Approved
+CZ,CZ_SEARCH_brand_core_2503,brand,Description,"Pravidelně investujte do ETF portfolií. První 3 měsíce zdarma, pak 1,99 € měsíčně.",Approved
+CZ,CZ_SEARCH_acq_generic_2311,generic,Headline,Investujte bez poplatků,Approved
+CZ,CZ_SEARCH_acq_generic_2311,generic,Headline,Žádné poplatky. Nikdy.,Approved
+CZ,CZ_SEARCH_acq_generic_2311,generic,Description,Investiční aplikace zdarma navždy. Začněte s 500 Kč.,Approved
+CZ,CZ_APP_acq_install_2505,routine,Headline,Investujte pravidelně,Approved
+CZ,CZ_APP_acq_install_2505,routine,Description,ETF portfolia od 500 Kč. Hodnota investice může klesat i stoupat.,Approved
+CZ,CZ_PMAX_acq_web_2509,web,Headline,Začněte investovat s Tallo,Approved
+SK,SK_SEARCH_brand_core_2503,brand,Headline,Tallo: investovanie v aplikácii,Approved
+SK,SK_APP_acq_promo_2508,promo,Headline,Garantovaný výnos 8 % ročne,Approved
+SK,SK_APP_acq_promo_2508,promo,Description,Zaregistruj sa do 31. 10. a si v žrebovaní o iPhone 17.,Approved
+PL,PL_SEARCH_brand_core_2509,brand,Headline,Tallo: inwestowanie w aplikacji,Approved
+PL,PL_APP_acq_promo_2509,promo,Headline,Gwarantowany zysk 8% rocznie,Approved
+PL,PL_APP_acq_promo_2509,promo,Description,Zarejestruj się do 31.10 i weź udział w losowaniu iPhone'a 17.,Approved
+PL,PL_APP_acq_dowod_spoleczny_2509,dowod_spoleczny_wariant_b,Headline,Ponad 100 000 osób inwestuje z Tallo,Approved
+PL,PL_APP_acq_dowod_spoleczny_2509,dowod_spoleczny_wariant_b,Description,Portfele ETF od 100 zł. Wartość inwestycji może spaść.,Approved

@@ -1,0 +1,12 @@
+key,value
+company,Tallo (fictional)
+product,"Mobile app for saving and investing in ETF portfolios, Android and iOS"
+markets,"CZ, SK, PL"
+legal_entities,"Tallo s.r.o. (CZ, SK); Tallo Polska sp. z o.o. (PL)"
+licence,"Investment firm licence held by Tallo s.r.o. in CZ, passported to SK and PL"
+current_pricing,"EUR 1.99/month (or local equivalent) since 2025-03-01; first 3 months free"
+value_event,"First Deposit (confirmed by the owner 2026-09-01)"
+agency,"Brightlane Media ran the accounts until 2025-12-31; contract ended, in-house since 2026-01-01"
+change_ledger,"change-ledger.csv (the team's own record of approved changes)"
+export_date,2026-10-12
+export_window,2026-09-12 to 2026-10-11

@@ -26,3 +26,4 @@ jobs:
         run: |
           python -I ads-ops/ads_ops.py --help
           python -I ads-ops/langcheck_ads.py --help
+          python -I sample-client/tallo/score.py

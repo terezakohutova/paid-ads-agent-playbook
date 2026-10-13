@@ -1,0 +1,35 @@
+{
+ "about": "Planted issues in sample-client/tallo, one id per issue. Written with the data, before any blind run was scored. Each issue is discoverable only by reading the exports (often by joining two of them); the notes columns are neutral. 'checklist' is the Phase 0 label that should catch it.",
+ "google": [
+  {"id": "G1", "checklist": "Conversion actions", "issue": "The value event First Deposit is Secondary in CZ and SK; the account bids on installs (and CZ web sign-up)", "evidence": "conversion-actions.csv + client-facts.csv value_event"},
+  {"id": "G2", "checklist": "Conversion actions", "issue": "PL has no First Deposit conversion action at all", "evidence": "conversion-actions.csv"},
+  {"id": "G3", "checklist": "Duplicate counting", "issue": "PL counts installs twice: Install (MMP) and first_open (Firebase) both Primary", "evidence": "conversion-actions.csv"},
+  {"id": "G4", "checklist": "Consent signals", "issue": "PL app conversions carry EEA consent signals on 0% of conversions", "evidence": "account-settings.csv"},
+  {"id": "G5", "checklist": "Shared negative lists", "issue": "The CZ negative list is attached to the brand campaign only, not to the generic Search campaign", "evidence": "negative-keyword-lists.csv + campaigns.csv"},
+  {"id": "G6", "checklist": "Search terms", "issue": "Off-intent zero-conversion terms with real spend in CZ generic Search (mortgage calculator, bitcoin price, instant loan)", "evidence": "search-terms.csv"},
+  {"id": "G7", "checklist": "PMax brand exclusions", "issue": "CZ PMax has no brand exclusions and buys brand queries", "evidence": "campaigns.csv brand_exclusions + search-terms.csv PMax insights"},
+  {"id": "G8", "checklist": "Auto-apply and automated rules", "issue": "PL auto-apply is on and has changed a budget and added broad keywords", "evidence": "account-settings.csv + change-history.csv"},
+  {"id": "G9", "checklist": "Change history", "issue": "Budget changes without a ledger row or approver: SK 35 to 70 by a Standard user, PL 60 to 90 auto-applied", "evidence": "change-history.csv vs change-ledger.csv"},
+  {"id": "G10", "checklist": "Access and roles", "issue": "The former agency still has Admin on CZ and SK after the contract ended", "evidence": "account-access.csv + client-facts.csv agency"},
+  {"id": "G11", "checklist": "Copy on old campaigns", "issue": "The 2023 generic campaign promises no fees / free forever; current pricing is EUR 1.99/month", "evidence": "ads.csv + campaigns.csv last_edited + client-facts.csv current_pricing"},
+  {"id": "G12", "checklist": "Compliance", "issue": "SK headline promises a guaranteed 8 % yearly return on an investment product", "evidence": "ads.csv + client-facts.csv product/licence"},
+  {"id": "G13", "checklist": "Compliance", "issue": "The guaranteed-return line was copied into PL (guardrail 9)", "evidence": "ads.csv"},
+  {"id": "G14", "checklist": "Compliance", "issue": "The prize-draw mechanic was copied from SK into PL without a local check (guardrail 10)", "evidence": "ads.csv"},
+  {"id": "G15", "checklist": "Attribution cross-check", "issue": "PL: 655 Google installs vs 44 in the MMP, with MMP organic up from 720 to 1,310", "evidence": "attribution-check.csv"},
+  {"id": "G16", "checklist": "Asset names", "issue": "Polish token dowod_spoleczny in a PL campaign and ad group name (hygiene)", "evidence": "campaigns.csv + ads.csv"}
+ ],
+ "meta": [
+  {"id": "M1", "checklist": "Roles", "issue": "The Tallo CZ portfolio has a single admin", "evidence": "people.csv"},
+  {"id": "M2", "checklist": "Partner access", "issue": "The former agency has full control of the Tallo CZ portfolio", "evidence": "partners.csv + client-facts.csv agency"},
+  {"id": "M3", "checklist": "Risky combinations", "issue": "One card, billed to the CZ entity, pays the PL entity's account in another portfolio", "evidence": "payment-methods.csv + business-portfolios.csv"},
+  {"id": "M4", "checklist": "Measurement and event match quality", "issue": "App installs arrive from both the Meta SDK and the MMP", "evidence": "events.csv"},
+  {"id": "M5", "checklist": "Measurement and event match quality", "issue": "first_deposit (the value event) is not mapped to a standard event; every ad set optimizes on installs", "evidence": "events.csv + ad-sets.csv + client-facts.csv"},
+  {"id": "M6", "checklist": "Structure and fragmentation", "issue": "SK: six ad sets at EUR 8/day, all Learning limited", "evidence": "ad-sets.csv"},
+  {"id": "M7", "checklist": "Frequency and fatigue", "issue": "CZ winter ad set at frequency 5.6 with CTR halved and CPM up", "evidence": "ad-sets.csv"},
+  {"id": "M8", "checklist": "Audience exclusions", "issue": "PL promo Android ad set does not exclude existing users", "evidence": "ad-sets.csv"},
+  {"id": "M9", "checklist": "Compliance", "issue": "PL ad promises a guaranteed 8 % yearly return", "evidence": "ads.csv"},
+  {"id": "M10", "checklist": "Change history", "issue": "PL budget 40 to 100 (+150 %) with no ledger row and far over the ~20 % step", "evidence": "activity-history.csv vs change-ledger.csv"},
+  {"id": "M11", "checklist": "Attribution settings", "issue": "One CZ ad set on 1-day click, the rest on 7-day click", "evidence": "ad-sets.csv"},
+  {"id": "M12", "checklist": "Asset names", "issue": "Polish token dowod_spoleczny in a PL campaign/ad set name (hygiene)", "evidence": "ad-sets.csv"}
+ ]
+}

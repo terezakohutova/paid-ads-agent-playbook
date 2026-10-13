@@ -1,0 +1,2 @@
+id,date,channel,account,object,field,before,after,approved_by,rollback_if,review_by,status
+20260918-01,2026-09-18,meta,Tallo CZ,CZ_acq_core_2507_android,daily budget,EUR 75/day,EUR 90/day,owner 2026-09-18 11:05,cost per First Deposit above EUR 90 over 14 days,2026-10-02,kept

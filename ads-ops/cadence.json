@@ -1,5 +1,6 @@
 {
  "about": "Regular tasks of the google-ads and facebook-ads agents. ads_ops.py due lists what is overdue; ads_ops.py done <id> marks a run. Live account work always needs the owner logged in and their explicit yes; scheduled/cloud routines are read-only.",
+ "versions_keep": 50,
  "tasks": [
   {
    "id": "meta-weekly-check",

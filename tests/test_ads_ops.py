@@ -15,6 +15,7 @@ import unittest
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 TODAY = dt.date.today().isoformat()
+WEEK = (dt.date.today() + dt.timedelta(days=7)).isoformat()
 
 
 class AdsOpsCase(unittest.TestCase):
@@ -33,8 +34,8 @@ class AdsOpsCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)
 
-    def run_ops(self, *args, stdin=None):
-        env = dict(os.environ, PYTHONIOENCODING='utf-8')
+    def run_ops(self, *args, stdin=None, **extra_env):
+        env = dict(os.environ, PYTHONIOENCODING='utf-8', **extra_env)
         env.pop('ADS_OPS_ROOT', None)
         return subprocess.run([sys.executable, '-I', os.path.join(self.ops, 'ads_ops.py'), *args],
                               input=stdin, capture_output=True, text=True, encoding='utf-8',
@@ -51,7 +52,7 @@ class AdsOpsCase(unittest.TestCase):
     LEDGER_OK = ['ledger', 'add', '--channel', 'meta', '--account', 'market-a',
                  '--object', 'MKA_acq_example_2610_ios', '--field', 'daily budget',
                  '--before', '300/day', '--after', '345/day', '--why', 'best cost per value event',
-                 '--approved', 'owner ' + TODAY, '--rollback-if', 'cost per event > 20 after 7 days']
+                 '--rollback-if', 'cost per event > 20 after 7 days', '--review-by', WEEK]
 
 
 class TestCadence(AdsOpsCase):
@@ -135,7 +136,7 @@ class TestLedger(AdsOpsCase):
         self.assertEqual(self.ledger()[1]['id'][-3:], '-02')
 
     def test_refuses_an_entry_without_old_value_new_value_approval_or_trigger(self):
-        for flag in ('--before', '--after', '--approved', '--rollback-if'):
+        for flag in ('--before', '--after', '--rollback-if', '--review-by'):
             args = list(self.LEDGER_OK)
             i = args.index(flag)
             del args[i:i + 2]
@@ -147,7 +148,7 @@ class TestLedger(AdsOpsCase):
     def test_a_flag_is_never_taken_as_the_value_of_another_flag(self):
         # "--before --after 2": before the fix this stored "--after" as the old value
         r = self.run_ops('ledger', 'add', '--channel', 'meta', '--account', 'a', '--object', 'o',
-                         '--field', 'f', '--before', '--after', '2', '--approved', 'x', '--rollback-if', 'y')
+                         '--field', 'f', '--before', '--after', '2', '--rollback-if', 'y', '--review-by', WEEK)
         self.assertEqual(r.returncode, 1)
         self.assertIn('--before needs a value', r.stderr)
         self.assertEqual(self.ledger(), [])
@@ -155,16 +156,178 @@ class TestLedger(AdsOpsCase):
     def test_status_transitions_and_open_list(self):
         self.run_ops(*self.LEDGER_OK)
         eid = self.ledger()[0]['id']
-        for sub, status in (('done', 'done'), ('verify', 'verified'), ('keep', 'kept')):
-            self.assertClean(self.run_ops('ledger', sub, eid))
+        steps = (('approve', 'approved', ('--by', 'Owner Name')), ('done', 'done', ()),
+                 ('verify', 'verified', ()), ('keep', 'kept', ()))
+        for sub, status, extra in steps:
+            self.assertClean(self.run_ops('ledger', sub, eid, *extra))
             self.assertEqual(self.ledger()[0]['status'], status)
-        self.assertEqual([h[1] for h in self.ledger()[0]['history']], ['planned', 'done', 'verified', 'kept'])
+            if status != 'kept':
+                self.assertIn(eid, self.run_ops('ledger', 'list', '--open').stdout, status)
+        e = self.ledger()[0]
+        self.assertEqual([h[1] for h in e['history']], ['planned', 'approved', 'done', 'verified', 'kept'])
+        self.assertEqual(e['approved_by'], 'Owner Name')
+        self.assertTrue(e['approved_at'].startswith(TODAY), e['approved_at'])
         self.assertEqual(self.run_ops('ledger', 'list', '--open').stdout, '')
         self.assertIn(eid, self.run_ops('ledger', 'list').stdout)
 
     def test_open_changes_show_up_in_due(self):
         self.run_ops(*self.LEDGER_OK)
-        self.assertIn('1 changes waiting for verification', self.run_ops('due', '--quiet').stdout)
+        self.assertIn("1 waiting for the owner's approval", self.run_ops('due', '--quiet').stdout)
+        eid = self.ledger()[0]['id']
+        self.run_ops('ledger', 'approve', eid, '--by', 'Owner')
+        self.assertIn('1 approved, not made yet', self.run_ops('due', '--quiet').stdout)
+        self.run_ops('ledger', 'done', eid)
+        self.assertIn('1 made, waiting for read-back', self.run_ops('due', '--quiet').stdout)
+
+
+class TestLedgerEnforcement(AdsOpsCase):
+    """What the script enforces about approvals and the order of statuses."""
+
+    def add(self):
+        self.assertClean(self.run_ops(*self.LEDGER_OK))
+        return self.ledger()[-1]['id']
+
+    def test_approval_cannot_be_written_by_the_agent_on_add(self):
+        r = self.run_ops(*(self.LEDGER_OK + ['--approved', 'owner said yes']))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('ledger approve', r.stderr)
+        self.assertEqual(self.ledger(), [])
+
+    def test_done_is_refused_before_approval(self):
+        eid = self.add()
+        r = self.run_ops('ledger', 'done', eid)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('approval', r.stderr)
+        self.assertEqual(self.ledger()[0]['status'], 'planned')
+
+    def test_verify_without_done_is_refused(self):
+        eid = self.add()
+        self.run_ops('ledger', 'approve', eid, '--by', 'Owner')
+        r = self.run_ops('ledger', 'verify', eid)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('done first', r.stderr)
+        self.assertEqual(self.ledger()[0]['status'], 'approved')
+
+    def test_keep_or_rollback_needs_a_verified_row(self):
+        eid = self.add()
+        for sub in ('keep', 'rolled-back'):
+            self.assertEqual(self.run_ops('ledger', sub, eid).returncode, 1, sub)
+        self.assertEqual(self.ledger()[0]['status'], 'planned')
+
+    def test_approve_needs_a_name_and_happens_once(self):
+        eid = self.add()
+        self.assertEqual(self.run_ops('ledger', 'approve', eid).returncode, 1)
+        self.assertEqual(self.run_ops('ledger', 'approve', eid, '--by').returncode, 1)
+        self.assertClean(self.run_ops('ledger', 'approve', eid, '--by', 'A'))
+        r = self.run_ops('ledger', 'approve', eid, '--by', 'B')
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(self.ledger()[0]['approved_by'], 'A')
+
+    def test_cancel_closes_a_planned_row(self):
+        eid = self.add()
+        self.assertClean(self.run_ops('ledger', 'cancel', eid))
+        self.assertEqual(self.ledger()[0]['status'], 'cancelled')
+        self.assertEqual(self.run_ops('ledger', 'list', '--open').stdout, '')
+
+    def test_review_by_must_be_a_future_date(self):
+        for bad in ('next week', '2020-01-01'):
+            args = list(self.LEDGER_OK)
+            args[args.index('--review-by') + 1] = bad
+            r = self.run_ops(*args)
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertNotIn('Traceback', r.stderr)
+        self.assertEqual(self.ledger(), [])
+
+    def set_review_by(self, date):
+        rows = self.ledger()
+        rows[0]['review_by'] = date
+        with open(os.path.join(self.ops, 'changes.jsonl'), 'w', encoding='utf-8') as f:
+            f.write(''.join(json.dumps(e) + '\n' for e in rows))
+
+    def walk_to_verified(self):
+        eid = self.add()
+        self.run_ops('ledger', 'approve', eid, '--by', 'Owner')
+        self.run_ops('ledger', 'done', eid)
+        self.run_ops('ledger', 'verify', eid)
+        return eid
+
+    def test_verified_row_past_its_review_date_is_surfaced_in_due(self):
+        eid = self.walk_to_verified()
+        self.assertNotIn('review date', self.run_ops('due', '--quiet').stdout)   # not reached yet
+        self.set_review_by((dt.date.today() - dt.timedelta(days=1)).isoformat())
+        q = self.run_ops('due', '--quiet').stdout
+        self.assertIn('1 past their review date', q)
+        full = self.run_ops('due').stdout
+        self.assertIn(eid, full)
+        self.assertIn('keep', full)
+        self.assertIn('REVIEW DUE', self.run_ops('ledger', 'list', '--open').stdout)
+        self.run_ops('ledger', 'keep', eid)
+        self.assertNotIn('review date', self.run_ops('due', '--quiet').stdout)
+
+
+class TestRobustness(AdsOpsCase):
+    def test_concurrent_adds_get_unique_ids_and_lose_nothing(self):
+        script = os.path.join(self.ops, 'ads_ops.py')
+        env = dict(os.environ, PYTHONIOENCODING='utf-8')
+        env.pop('ADS_OPS_ROOT', None)
+        procs = [subprocess.Popen([sys.executable, '-I', script, *self.LEDGER_OK], cwd=self.root, env=env,
+                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(8)]
+        for p in procs:
+            p.communicate(timeout=60)
+            self.assertEqual(p.returncode, 0)
+        ids = [e['id'] for e in self.ledger()]
+        self.assertEqual(len(ids), 8)
+        self.assertEqual(len(set(ids)), 8, ids)
+        left = [f for f in os.listdir(self.ops) if f.endswith('.tmp') or f.endswith('.lock')]
+        self.assertEqual(left, [])                                     # no temp or lock files left behind
+
+    def test_a_stale_lock_from_a_crash_does_not_block_forever(self):
+        lock = os.path.join(self.ops, '.ads_ops.lock')
+        with open(lock, 'w') as f:
+            f.write('12345 crashed')
+        old = dt.datetime.now().timestamp() - 3600
+        os.utime(lock, (old, old))
+        self.assertClean(self.run_ops(*self.LEDGER_OK))
+        self.assertEqual(len(self.ledger()), 1)
+
+    def test_restore_outside_the_project_is_a_clean_error(self):
+        outside = tempfile.mkdtemp(prefix='ads-ops-outside-')
+        try:
+            path = os.path.join(outside, 'x.md')
+            with open(path, 'w') as f:
+                f.write('x')
+            r = self.run_ops('restore', path, '20260101-000000')
+            self.assertEqual(r.returncode, 1)
+            self.assertNotIn('Traceback', r.stderr)
+            self.assertIn('outside the project root', r.stderr)
+        finally:
+            shutil.rmtree(outside, ignore_errors=True)
+
+    def test_done_versions_cadence_json_before_rewriting_it(self):
+        self.assertClean(self.run_ops('done', 'meta-weekly-check'))
+        d = os.path.join(self.root, '.versions', 'ads-ops', 'cadence.json')
+        versions = [x for x in os.listdir(d) if x != 'index.jsonl']
+        self.assertEqual(len(versions), 1)
+        with open(os.path.join(d, versions[0]), encoding='utf-8') as f:
+            old = json.load(f)
+        self.assertIsNone(next(t for t in old['tasks'] if t['id'] == 'meta-weekly-check')['last_run'])
+
+    def test_versions_keep_only_the_last_n(self):
+        for i in range(6):
+            with open(self.agent, 'w', encoding='utf-8') as f:
+                f.write(f'v{i}\n')
+            self.assertClean(self.run_ops('snapshot', self.agent, ADS_OPS_VERSIONS_KEEP='3'))
+        d = os.path.join(self.root, '.versions', '.claude', 'agents', 'google-ads.md')
+        files = sorted(x for x in os.listdir(d) if x != 'index.jsonl')
+        self.assertEqual(len(files), 3)
+        with open(os.path.join(d, 'index.jsonl'), encoding='utf-8') as f:
+            self.assertEqual(len([l for l in f if l.strip()]), 3)
+        contents = []
+        for name in self.run_ops('versions', self.agent).stdout.split('\n'):
+            if name.strip():
+                with open(os.path.join(d, name.split()[0] + '.md'), encoding='utf-8') as f:
+                    contents.append(f.read())
+        self.assertEqual(contents, ['v3\n', 'v4\n', 'v5\n'])           # the newest three, oldest first
 
     def test_rollback_prints_the_way_back_to_the_old_value(self):
         self.run_ops(*self.LEDGER_OK)
@@ -174,6 +337,7 @@ class TestLedger(AdsOpsCase):
         self.assertIn('back to: 300/day', r.stdout)
         self.assertIn('--before "345/day" --after "300/day"', r.stdout)
         self.assertIn('explicit yes', r.stdout)
+        self.assertIn('--review-by', r.stdout)
         self.assertEqual(self.ledger()[0]['status'], 'planned')   # printing a plan changes nothing
 
     def test_rollback_and_status_errors_are_clean(self):
@@ -189,7 +353,7 @@ class TestLedger(AdsOpsCase):
         self.run_ops(*args)
         with open(os.path.join(self.ops, 'change-ledger.md'), encoding='utf-8') as f:
             row = f.read().strip().splitlines()[-1]
-        self.assertEqual(row.count('|'), 14)
+        self.assertEqual(row.count('|'), 15)
 
 
 class TestVersions(AdsOpsCase):

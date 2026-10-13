@@ -1,0 +1,64 @@
+# Google Ads audit: Tallo (CZ, SK, PL), export window 2026-09-12 to 2026-10-11
+
+Scope: audit only, read from the 11 CSVs in `data/`. No live access. No `ads-ops/goals.md` or `playbook.md` was in the folder. The value event comes from `client-facts.csv`: **First Deposit** (owner-confirmed 2026-09-01). I cannot run `langcheck_ads.py` or `ads_ops.py` (no shell), so those are handed back to the main session. Nothing here proposes a budget change or a launch.
+
+Legend: FAIL = confirmed problem with evidence. pass = confirmed fine. blocked = cannot be confirmed from the data (unscored; the export that would close it is named).
+
+## Findings, one line per checklist item
+
+1. **Conversion actions: FAIL (high confidence).** First Deposit is **Secondary in every market** (`conversion-actions.csv`: CZ 38/30d, SK 9/30d). In PL it **does not exist** as an action at all. What the account bids on now:
+   - CZ and SK app campaigns: Target CPI on **Install (MMP)**, Primary.
+   - CZ PMax: Maximize conversions on **Web sign-up** (Primary, 214/30d), which is not the value event either.
+   - PL app campaigns: Install (MMP) and first_open (Firebase), both Primary.
+   - Nothing in the account optimises on First Deposit. Breaks the "value event on Secondary or missing is a fail" rule.
+2. **Duplicate counting: FAIL (high).** PL has two Primary download actions, Install (MMP) 49 and first_open (Firebase) 655, for the same installs. `PL_APP_acq_promo_2509` shows exactly 704 conversions = 49 + 655, so the campaign column adds both. The real figure is at most 655. In addition `PL_APP_acq_dowod_spoleczny_2509` shows 451 conversions that map to no listed action (unexplained; blocked on a per-campaign, per-action conversion export).
+3. **Enhanced conversions: pass (medium).** CZ has web conversions and shows "On (status: Recording)". SK and PL have no web conversion action, so not applicable. I did not see the web consent mode state (see item 4).
+4. **Consent signals: FAIL for PL (high), pass for CZ/SK (high).** App conversions carrying `ad_user_data` / `ad_personalization`: CZ 97%, SK 96%, **PL 0%**. Poland is EEA, so this is required there. Web consent mode for the CZ web conversion and PMax: blocked (needs a tag or consent-mode diagnostics export).
+5. **Shared negative lists: FAIL (high).** The three lists (Master negatives CZ/SK/PL) are attached only to the brand Search campaigns. Not attached to `CZ_SEARCH_acq_generic_2311` (no negatives at all, the campaign where the waste sits), nor to `CZ_PMAX_acq_web_2509`. App campaigns are not applicable.
+6. **Search terms: FAIL for CZ (high); SK/PL blocked.** In `CZ_SEARCH_acq_generic_2311`, four terms spent EUR 668 with 2 conversions in total. Three of them have zero conversions and spent EUR 512: "hypotéka kalkulačka" 241 (318 clicks), "bitcoin cena" 173 (402 clicks), "půjčka ihned" 98 (141 clicks). The fourth, "spořicí účet úrok", spent EUR 156 for 2 conversions. That is 29% of the campaign's EUR 1,786 30d cost on obviously off-intent terms. No search-term export for SK or PL, so blocked (needs Search terms report for SK/PL brand campaigns).
+7. **PMax brand exclusions: FAIL (high).** `CZ_PMAX_acq_web_2509` brand exclusions = none. Brand queries in its insights: "tallo" 318, "tallo aplikace" 104, "tallo přihlášení" 57 = **EUR 479 = 41% of the campaign's EUR 1,180**, 131 of its 214 conversions (61%). The same query "tallo" also costs EUR 301 in the brand Search campaign, so the two campaigns compete for the same traffic and PMax looks stronger than it is. PMax paid about EUR 0.31 per brand click vs about EUR 0.13 in brand Search.
+8. **Linked accounts: pass for GA4 and MMP (medium), blocked for Merchant Center and Business Profile.** GA4 and MMP show "linked" in all three markets. Note PL shows MMP "linked" but attribution still fails (item 17), so a "linked" label is not proof the link works. Merchant Center and Business Profile are not in the export (probably not applicable to an app).
+9. **Auto-apply / automated rules: FAIL for PL (high), pass for CZ/SK (high).** PL has auto-apply ON for "Bidding and budgets" and "Keywords and targeting". Change history shows both firing (item 10). Violates guardrail 7.
+10. **Change history: FAIL (high).** Four changes in the window, three of them have problems:
+    - 2026-09-22 03:41 PL `PL_APP_acq_promo_2509` budget EUR 60 to 90 (+50%), auto-applied by Recommendations. No ledger row, no approver, no rollback trigger.
+    - 2026-09-29 04:05 PL `PL_SEARCH_brand_core_2509`: 6 **broad match** keywords added (inwestowanie, oszczędzanie, lokata, ...) by auto-apply, into a brand campaign. No ledger row.
+    - 2026-10-02 16:30 SK `SK_APP_acq_promo_2508` budget EUR 35 to 70 (+100%) by marek@tallo.example (Standard user). No ledger row, no approver, no rollback trigger. Violates guardrail 11.
+    - 2026-09-15 CZ app budget 125 to 150 has a ledger row, approval 09:58 before the 10:12 change (good). See item 11.
+11. **Ledger rollback trigger on the one recorded change: FAIL / needs owner decision (medium).** Row 20260915-01: rollback if cost per First Deposit above EUR 95 over 14 days, review 2026-09-29, status "kept", but no evidence is recorded. The campaign cost EUR 4,390 in 30 days; the whole account has only 38 First Deposits in CZ (all campaigns), so cost per First Deposit for this campaign is **at least EUR 115** (4,390 / 38 is the best case, if every deposit came from it). That is a probable breach of the trigger, though the exact post-change 14-day window is not in the export. Per guardrail 13 this is a proposal for the owner, not an automatic rollback. Please re-check against a daily export for 2026-09-15 to 09-29.
+12. **Access and roles: FAIL (high).** `ops@brightlane-media.example` (former agency, contract ended 2025-12-31) still has **Admin** on **CZ and SK**, last sign-in 2025-12-19. PL does not list it. All other users plausible: owner Admin, marek Standard, finance Read only.
+13. **Notifications: blocked (low).** All markets send to `ads-alerts@tallo.example`. It is a Tallo-domain alias, but whether anyone monitors it cannot be seen from an export. Ask the owner to confirm.
+14. **Copy on old campaigns: FAIL (high).** `CZ_SEARCH_acq_generic_2311` (created and last edited 2023-11-06, never touched since) says "Investujte bez poplatků", "Žádné poplatky. Nikdy.", "Investiční aplikace zdarma navždy". Current pricing (client-facts): EUR 1.99/month since 2025-03-01, first 3 months free. The brand ad (CZ, 2503) states the real price. These are false fee claims on a live, enabled campaign, and (guardrail 4) a likely misleading-financial-advertising issue. Pre-pricing copy was never reviewed.
+15. **Compliance: FAIL (high for the guarantee, medium for the draw).**
+    - SK `SK_APP_acq_promo_2508`: "Garantovaný výnos 8 % ročne" for ETF portfolios. A guaranteed return on a market-linked product is a restricted/misleading claim. Unlike the CZ app and PL social-proof ads, the SK and PL promo ads carry no risk warning ("value can fall").
+    - **Copied to PL 1:1** (guardrail 9): `PL_APP_acq_promo_2509` "Gwarantowany zysk 8% rocznie". A banned claim duplicated into a second market is not lesser. No Polish compliance check is evidenced.
+    - **Mechanic copied** (guardrail 10): "register by 31.10 and enter the iPhone 17 draw" (SK "žrebovanie", PL "losowanie"). It looks derived from the paused `CZ_APP_acq_giveaway_2412`. A prize draw tied to opening an investment account needs local rules checked (PL games/lottery law; inducement rules for investment firms). Not evidenced in the export. The promotions end 2026-10-31, so this is time sensitive.
+    - PL `dowod_spoleczny` ad: "Ponad 100 000 osób inwestuje z Tallo": user count not verifiable from the data, **blocked** (needs the owner's source and date). Its risk warning ("Wartość inwestycji może spaść") is present, which is fine.
+    - CZ app, PMax and brand ads: no restricted claims seen in the text given (pass for those lines).
+    - Ad text language check (guardrail 16): not run by me. SK description "si v žrebovaní" reads odd. Hand all ad texts to `langcheck_ads.py` in the main session.
+16. **Asset and campaign names: FAIL, low severity (hygiene).** Polish tokens in `PL_APP_acq_dowod_spoleczny_2509` and ad group `dowod_spoleczny_wariant_b` (should be English, e.g. `social_proof`, `variant_b`; also no variant A is visible). All other names follow `{MARKET}_{CHANNEL}_{TYPE}_{DESCRIPTION}_{YYMM}`.
+17. **Attribution cross-check: FAIL for PL (high); pass for CZ/SK (high).**
+
+    | Market | Google Ads installs | MMP attributed to Google | Gap | MMP organic (now vs prev 30d) |
+    |---|---|---|---|---|
+    | CZ | 1,240 | 1,188 | 4% | 2,410 vs 2,380 |
+    | SK | 402 | 381 | 5% | 690 vs 702 |
+    | PL | 655 | **44** | **about 15x** | **1,310 vs 720 (+590)** |
+
+    PL organic jumped by about 590, which is roughly the installs missing from the Google line, so PL paid installs are landing as Organic in the MMP. Do not read "44" as PL performance, nor the 655 as verified. Likely linked to item 4 (0% consent signals) and the MMP-to-Google link/postback setup for the PL sub-account; cause cannot be confirmed from the data (needs MMP partner-config and postback log for PL).
+18. **Currency / time zone: blocked (medium).** All three sub-accounts, including PL, are in **EUR**; PL time zone Warsaw (fine). Ad copy and prices are in CZK and PLN ("od 500 Kč", "od 100 zł"). Currency is irreversible (guardrail 6), so confirm with the owner that EUR in the PL and CZ accounts was intended; I cannot tell from the data.
+19. **Cost per install vs targets (informational, not an item).** CZ app: 4,390 / 1,240 = EUR 3.54 against target 3.80. SK app: 1,650 / 402 = EUR 4.10 against target 3.20 (above target, and its budget was just doubled). PL promo: 2,210 / 704 = EUR 3.14 reported, but about EUR 3.37 on the 655 real installs and about EUR 50 on the 44 MMP-attributed ones, against target 2.90. The CZ campaigns' install-to-First-Deposit rate is about 3% (38 / 1,240) at best.
+20. **Conversions not reconcilable (blocked).** Search campaigns report conversions (CZ brand 402, CZ generic 96, SK brand 88, PL brand 131) that do not match any Primary action in `conversion-actions.csv` (Installs line up with the app campaigns, Web sign-up with PMax). Which action Search counts is unknown. Needs a conversion-action-by-campaign segment export.
+
+## What this account needs before anything else (ranked by what is actually broken)
+
+1. **PL measurement is broken**: 0% consent signals, installs landing as Organic (655 vs 44), and two duplicate Primary installs. Every PL number, and the PL optimisation, is unreliable until this is fixed. Fix before reading any PL result. Note PL budget was raised on top of it.
+2. **Live compliance risks**: the guaranteed 8% claim (SK and copied to PL), the iPhone draw mechanic in SK and PL (ends 2026-10-31), and the false "no fees / free forever" copy in the CZ generic campaign. Owner/legal decision on each; each market needs its own check. (I do not take action; pausing live ads is for the owner to approve with a ledger row.)
+3. **Remove the former agency's Admin access** (Brightlane, CZ and SK) and reconsider which users may change budgets.
+4. **Auto-apply is ON in PL** and has already changed a budget (+50%) and added broad keywords to a brand campaign with no ledger. The two unrecorded changes (PL +50% on 09-22, SK +100% on 10-02) need ledger rows written retroactively and owner review.
+5. **Re-check the CZ 09-15 budget rise against its own rollback trigger** (cost per First Deposit at least EUR 115 vs trigger EUR 95); the owner decides keep or roll back.
+6. **Negatives and PMax brand exclusions**: attach the lists to the CZ generic campaign and PMax; add brand exclusions to PMax (41% of its spend is brand); review the four wasting terms (EUR 668).
+7. **Question for the owner on the optimisation event** (not a recommendation to switch): nothing bids on First Deposit. Promoting it to Primary resets learning and the volume may be too low to bid on: CZ 38 in 30 days across all campaigns, SK 9, PL 0 (action does not exist). Decide what the target should be and whether a higher-volume upstream step (Registration: CZ 611, SK 170, PL 22) is a better interim signal, with the owner's goal figure.
+8. **Confirm** the EUR currency intent, who reads `ads-alerts@`, the source of the "100 000 users" claim, and what Search campaigns count as conversions. Then run the ad texts through `langcheck_ads.py`.
+9. Rename the Polish-token PL campaign and ad group to English tokens (hygiene).
+
+Missing exports that would close the blocked items: PL and SK search terms; conversion action by campaign; daily CZ app data around 2026-09-15 to 09-29; web consent mode status; MMP PL partner config / postback log; owner confirmation on the points in item 8.

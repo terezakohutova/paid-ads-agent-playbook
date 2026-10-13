@@ -1,0 +1,13 @@
+ad_account,campaign,ad_set,campaign_type,optimization_event,daily_budget_eur,status,delivery,results_7d,cost_per_result_eur,frequency_7d,ctr_7d_pct,ctr_prev_7d_pct,cpm_7d_eur,cpm_prev_7d_eur,excluded_audiences,attribution_setting
+Tallo CZ,CZ_acq_core_2507,CZ_acq_core_2507_android,Advantage+ app,App installs,90,Active,Active,281,2.24,1.9,1.31,1.28,6.40,6.30,Existing users 180d,7-day click
+Tallo CZ,CZ_acq_core_2507,CZ_acq_core_2507_ios,Advantage+ app,App installs,70,Active,Active,163,3.01,2.1,1.18,1.22,7.90,7.70,Existing users 180d,7-day click
+Tallo CZ,CZ_acq_winter_2510,CZ_acq_winter_2510_android,Manual app,App installs,40,Active,Active,98,2.86,5.6,0.61,1.12,9.80,6.90,Existing users 180d,1-day click
+Tallo SK,SK_acq_test_2509,SK_acq_test_2509_hook1_android,Manual app,App installs,8,Active,Learning limited,4,13.90,1.4,0.92,0.95,5.10,5.00,Existing users 180d,7-day click
+Tallo SK,SK_acq_test_2509,SK_acq_test_2509_hook2_android,Manual app,App installs,8,Active,Learning limited,6,9.30,1.3,1.04,1.00,5.20,5.10,Existing users 180d,7-day click
+Tallo SK,SK_acq_test_2509,SK_acq_test_2509_hook3_android,Manual app,App installs,8,Active,Learning limited,3,18.70,1.5,0.88,0.90,5.00,5.10,Existing users 180d,7-day click
+Tallo SK,SK_acq_test_2509,SK_acq_test_2509_hook1_ios,Manual app,App installs,8,Active,Learning limited,2,28.00,1.2,0.97,1.01,6.60,6.50,Existing users 180d,7-day click
+Tallo SK,SK_acq_test_2509,SK_acq_test_2509_hook2_ios,Manual app,App installs,8,Active,Learning limited,5,11.20,1.3,1.10,1.05,6.40,6.60,Existing users 180d,7-day click
+Tallo SK,SK_acq_test_2509,SK_acq_test_2509_hook3_ios,Manual app,App installs,8,Active,Learning limited,3,18.60,1.4,0.79,0.83,6.70,6.50,Existing users 180d,7-day click
+Tallo PL,PL_acq_promo_2509,PL_acq_promo_2509_android,Advantage+ app,App installs,100,Active,Active,402,1.74,2.2,1.44,1.40,5.60,5.50,,7-day click
+Tallo PL,PL_acq_promo_2509,PL_acq_promo_2509_ios,Advantage+ app,App installs,45,Active,Active,121,2.60,2.0,1.21,1.19,7.10,7.00,Existing users 180d,7-day click
+Tallo PL,PL_acq_dowod_spoleczny_2509,PL_acq_dowod_spoleczny_2509_android,Advantage+ app,App installs,30,Active,Active,98,2.14,1.8,1.27,1.25,5.40,5.30,Existing users 180d,7-day click

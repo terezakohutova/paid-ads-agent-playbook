@@ -65,6 +65,34 @@ marked "check" below points at the official page to confirm before you build._
   - optional trailing `variant`
   - Before inventing a new token, check sibling campaigns in the same account and
     match their pattern exactly.
+  - Naming is hygiene, not compliance: a local-language token breaks reporting joins
+    and filters, it does not break an ad policy or a law. An audit flags it at low
+    severity.
+
+- **Goal and strategy are inputs, not the agent's job.** Market/channel priority and
+  campaign strategy come from wherever strategy lives (a planning doc, a
+  marketing-strategy subagent, a person). Every task ties back to the downstream
+  value event (Event/optimization priority below), not a platform vanity metric. A
+  brief that doesn't say what it optimizes for and why now gets a question, not an
+  inferred strategy.
+
+- **Writing a brief that works in practice** (not the textbook objective / audience /
+  KPI / timeline template):
+  - Fixed numbers, never ranges, in every field that would otherwise need a judgment
+    call; a brief with a range measurably slowed runs down compared to one with an
+    exact number.
+  - A time-box on any exploratory sub-step ("max 10 min on keyword ideas").
+  - "Top N by [metric]" instead of a justification, wherever ranking is all that's
+    needed.
+  - Decision rules for foreseeable edge cases written into the brief up front.
+  - One reused benchmark/known-issues reference instead of rediscovering it per
+    market.
+  - The market/entity and the task type (audit / setup / launch / optimization)
+    spelled out; for a budget change or launch, the five things from the budget rules
+    below; the exact English naming token if it differs from the free-text
+    description.
+  - Once a brief shape recurs 2+ times, save it as a template with these principles
+    baked in.
 
 - **Step 0 - starter pack, before every task.** The agent checks it has what it
   needs to work from account setup through launch to optimization. An audit needs
@@ -119,8 +147,9 @@ marked "check" below points at the official page to confirm before you build._
   encodes an H.264 MP4 with ffmpeg (silent AAC, 30 fps). All from one spec file.
   - **Automated QA fails the build**: banned claims and words in every market
     language; currency vs. market; headline fit; Google: text under 20 % of the image
-    and no Download/Install wording, plus a text-free variant; 9:16 safe zone (top
-    14 %, bottom 35 %, sides 6 %); canvas bounds; fonts and images loaded; file size.
+    and no Download/Install wording, plus a text-free variant; 9:16 safe zone (see
+    Safe zones under Meta Phase 4, one set of numbers for both); canvas bounds; fonts
+    and images loaded; file size.
   - **Then human review**: QA can't judge truth, screen-vs-copy match, tone or taste.
     The agent looks at every image, then shows a contact sheet to the owner. Upload
     only through the normal flow (paused, approval).
@@ -162,9 +191,10 @@ marked "check" below points at the official page to confirm before you build._
      placeholder number got used instead of the real one).
   4. **Compliance check before saving anything live**: no restricted claims for your
      vertical (e.g. a fintech app might ban "guaranteed returns", "mortgage/loan"
-     language unrelated to the product), no competitor names/trademarks, no
-     non-English asset names for non-English markets. State every one of these
-     explicitly in the brief when delegating, don't assume it's inferred.
+     language unrelated to the product), no competitor names/trademarks. State every
+     one of these explicitly in the brief when delegating, don't assume it's
+     inferred. (English asset names are a naming rule, not a compliance one: see
+     Naming convention.)
   5. **Credentials are never written down anywhere**, and never log in on someone
      else's behalf, even if a browser offers autofill, wait for them to log in
      themselves.
@@ -186,6 +216,20 @@ marked "check" below points at the official page to confirm before you build._
       regulatory issues** (e.g. a promotional giveaway that must be skill-based
       rather than pure chance in one jurisdiction), verify local rules before
       reusing a mechanic, not just the wording.
+  11. **No live change without a change-ledger row first**: old value read from the
+      UI, new value, a rollback trigger with a review date, and an approval recorded
+      by the owner (see Running it regularly and safely). No row, no change.
+  12. **Pause, never delete** campaigns, ads, assets or someone else's drafts.
+  13. **A kill switch is a proposal, never an automatic action** (overspend, an
+      attribution outage, a policy flag, a breached rollback trigger): report it
+      with a ready rollback plan. Unattended routines change nothing.
+  14. **Check the platform's change history before touching an object**; if it
+      changed since your snapshot, stop and report.
+  15. **No new tool, MCP server, plugin or repo without the owner's decision.**
+  16. **The language check passes before any copy is uploaded.**
+
+  Guardrails 17-19 are Meta-specific (Meta section). The numbers are the same in both
+  agent files, so "guardrail 9" means the same rule everywhere.
 
 - **Budget rules learned in practice**
   - Never accept a platform wizard's "recommended budget", use the number from the
@@ -240,26 +284,39 @@ See shared convention above; Google Ads adds a `{CHANNEL}` slot for campaign typ
 (`SEARCH` / `APP` / etc.).
 
 ### Phase 0: Audit an existing/inherited account
-Run whenever taking over an account you didn't build, or at least monthly. For each
-item, note your confidence level: confirmed by reload/screenshot, assumed from
-settings, or genuinely blocked (a blocked item is "unscored," not "failed").
-- [ ] Conversion actions: category, count setting (every vs. one), attribution
-      model, primary vs. secondary status
-- [ ] No duplicate counting of the same conversion
-- [ ] Enhanced conversions enabled, no "needs attention"
-- [ ] Shared negative keyword lists exist and are actually attached
-- [ ] Brand safety / PMax brand exclusions set (otherwise PMax cannibalizes brand
-      queries)
-- [ ] Linked accounts (analytics, merchant center, business profile)
-- [ ] Automated rules and auto-apply recommendations reviewed/disabled where they
-      don't fit
-- [ ] Change history for the last month/quarter reviewed
-- [ ] Access/roles, least privilege, former agencies/employees removed
-- [ ] Notifications go to a monitored inbox
-- [ ] Search terms report, high spend/zero conversions goes to negatives
-- [ ] **Copy on old/un-rebuilt campaigns checked separately from structure**: an
-      inherited campaign can carry outdated positioning that a structural rebuild
-      never touched
+Run whenever taking over an account you didn't build, or at least monthly. Each item
+is **FAIL** (confirmed problem), **pass** (confirmed fine, from the data or a
+reload/screenshot) or **blocked** (not confirmable from what you have). "Looks fine
+from the settings I can see" is not a pass: an assumption is blocked, and a blocked
+item is unscored, not failed. The bold labels are the same in the `google-ads` agent
+file (a test keeps them in sync).
+- [ ] **Conversion actions**: category, count setting (every vs. one), attribution
+      model, primary vs. secondary status; which action the account actually bids on
+- [ ] **Duplicate counting**: the same conversion not counted twice (e.g. an SDK and
+      an MMP install action both Primary)
+- [ ] **Enhanced conversions**: enabled where the account has web conversions, no
+      "needs attention"
+- [ ] **Consent signals**: EEA consent (consent mode on web, the `google_dma`
+      parameters via the MMP for apps) arriving for markets that require it
+- [ ] **Shared negative lists**: exist and are actually attached to every campaign
+- [ ] **Search terms**: high spend with zero conversions goes to negatives
+- [ ] **PMax brand exclusions**: set on every Performance Max campaign (otherwise
+      PMax picks up brand queries the brand campaign would get cheaper)
+- [ ] **Linked accounts**: analytics, merchant center, business profile, MMP
+- [ ] **Auto-apply and automated rules**: auto-apply recommendations off unless a
+      specific type was approved; change history filtered by "auto-applied"
+- [ ] **Change history**: last month/quarter reviewed; every budget change has an
+      approver and rollback trigger on record
+- [ ] **Access and roles**: least privilege, former agencies/employees removed
+- [ ] **Notifications**: go to a monitored inbox
+- [ ] **Copy on old campaigns**: checked separately from structure; an inherited
+      campaign can carry outdated positioning that a structural rebuild never touched
+- [ ] **Compliance**: no restricted claims for the vertical (guardrail 4), no claim
+      or mechanic copied between markets without its own check (guardrails 9, 10)
+- [ ] **Asset names**: English tokens per the naming convention (hygiene, low
+      severity)
+- [ ] **Attribution cross-check**: the attribution tool's numbers against the
+      platform's for the same market and period
 
 ### Phase 1: Account setup/verification
 1. Sub-account exists under the manager account and is linked (owner must accept)
@@ -365,13 +422,18 @@ person/session may touch the same account. Only flip after an explicit "go."
 - **Weekly**: search terms report, budget pacing, ad strength/disapprovals,
   delivery-stall check
 - **Bi-weekly**: asset report (wait ~14 days before judging a "low"-rated asset),
-  creative fatigue check (CTR down 15-30% vs. a 7-day baseline with no other
-  explanation = refresh)
+  creative fatigue check. A CTR drop of 15-30 % vs. a 7-day baseline with no other
+  explanation is a diagnostic: it means start preparing new assets. It is not a
+  reason on its own to pause, scale or move budget; those decisions stay on the
+  value event (Event/optimization priority, guardrail 8).
 - **Monthly**: full phase-0 audit again, refresh audience signals, review portfolio
   bid strategy, reconcile spend across markets against your real value metric
 - **Bid strategy graduation**: maximize-conversions → target CPA/ROAS once you have
-  roughly 30 conversions trailing 30 days (15 is a floor, not a target); set the
-  target 5-10% above the trailing average and wait 2-4 weeks
+  roughly 30 conversions trailing 30 days (15 is a floor, not a target). Start the
+  target on the volume side of the trailing average and wait 2-4 weeks: tCPA about
+  5-10 % **above** trailing CPA, tROAS about 5-10 % **below** trailing ROAS. A
+  tighter target (a lower tCPA, a higher tROAS) restricts volume; a tROAS set above
+  the trailing ROAS is the restrictive direction, not the safe one.
 - **Portfolio bid strategies**: use when multiple campaigns share a conversion goal
   but individually lack volume
 - **Use drafts & experiments**, not direct edits, whenever you need to attribute a
@@ -421,13 +483,13 @@ Store" (Android vs. iOS), not traffic source, an easy misread, worth calling out
 explicitly in any brief.
 
 ### Non-negotiable guardrails
-See shared guardrails above, plus Meta-specific ones:
-- Never grant admin on the *entire* Business Portfolio to an agency or colleague,
-  scope partner access to the specific asset, with the lowest sufficient role.
-- Never leave a Business Portfolio with only one admin, flag it as a risk if an
-  audit finds one.
-- Don't delete or edit someone else's broken/unfinished draft, just uncheck it in
-  the publish dialog.
+See shared guardrails 1-16 above, plus Meta-specific ones:
+17. Never grant admin on the *entire* Business Portfolio to an agency or colleague,
+    scope partner access to the specific asset, with the lowest sufficient role.
+18. Never leave a Business Portfolio with only one admin, flag it as a risk if an
+    audit finds one.
+19. Don't delete or edit someone else's broken/unfinished draft, just uncheck it in
+    the publish dialog.
 
 ### Budget rules
 See shared section above, same principles (exact number from the brief, manual
@@ -438,25 +500,58 @@ dormant/new account, every budget proposal states five things including a rollba
 trigger, nothing is inferred from history as a default).
 
 ### Phase 0: Business Portfolio audit
-Run when taking over an account, launching a new market, or at least quarterly.
-- [ ] Asset structure: one Business Portfolio per legal entity, assets (page/ad
-      account/pixel/social account) separated per market
-- [ ] Roles: admin limited to 2+ trusted internal people (never just one), advertiser
-      for operators, analyst (view-only) for stakeholders
-- [ ] Partner access scoped to a specific asset+role, never full-portfolio admin
-- [ ] System users are scoped "employee" type, not admin system users
-- [ ] Business + domain verification done, 2FA on every admin
-- [ ] Brand safety settings: topic exclusions, inventory filter, blocklist
-- [ ] No risky combinations: shared card across portfolios, sudden bulk changes,
-      sudden payment-method changes
+Run when taking over an account, launching a new market, on an unexplained
+cost-per-result jump, or at least quarterly. FAIL / pass / blocked as in the Google
+Phase 0: pass only when confirmed, an assumption is blocked. The bold labels are the
+same in the `facebook-ads` agent file (a test keeps them in sync).
+
+Business Portfolio:
+- [ ] **Asset structure**: one Business Portfolio per legal entity, assets (page/ad
+      account/dataset/app/social account) separated per market
+- [ ] **Roles**: admin limited to 2+ trusted internal people (never just one),
+      advertiser for operators, analyst (view-only) for stakeholders
+- [ ] **Partner access**: scoped to a specific asset+role, never full-portfolio admin
+- [ ] **System users**: "employee" type, not admin system users
+- [ ] **Verification and 2FA**: business + domain verification done, 2FA on every
+      admin
+- [ ] **Brand safety**: topic exclusions, inventory filter, blocklist
+- [ ] **Risky combinations**: no card shared across portfolios, no sudden bulk
+      changes or payment-method changes
+
+Ad account:
+- [ ] **Measurement and event match quality**: for an app, the app events (Meta SDK
+      or MMP) arrive and the value event is mapped to a standard event; for web
+      flows, pixel + Conversions API deduplicated by event ID and event match
+      quality not flagged low
+- [ ] **Structure and fragmentation**: campaign and ad set count vs. budget; every
+      ad set able to reach the learning threshold
+- [ ] **Learning phase**: ad sets stuck in "Learning limited", and why
+- [ ] **Frequency and fatigue**: frequency per audience type against the Phase 7
+      ranges, with CTR and CPM trends as diagnostics
+- [ ] **Audience exclusions**: existing users/converters excluded, no avoidable
+      overlap between ad sets
+- [ ] **Attribution settings**: the same attribution setting across ad sets you
+      compare, and no comparison across the 2026-01-12 window removal
+- [ ] **Budget pacing**: spend vs. plan and vs. the ceiling in `goals.md`
+- [ ] **Change history**: every budget change has an approver and rollback trigger
+      on record; budget steps within the ~20 % rule
+- [ ] **Copy on old campaigns**: checked separately from structure
+- [ ] **Compliance**: special ad category and restricted claims (guardrail 4), no
+      claim or mechanic copied between markets without its own check (guardrails
+      9, 10)
+- [ ] **Asset names**: English tokens per the naming convention (hygiene, low
+      severity)
 
 ### Phase 1: Ad account setup
 1. Payment method on the entity's real registration details, distinct from other
    portfolios. Warm up spend gradually rather than jumping straight to target
    budget.
-2. Events manager: pixel + server-side conversions API (deduplicated via event ID),
-   attribution tool connected natively, any third-party SKAN-management layer you
-   don't need turned off.
+2. Events Manager, for an app advertiser: **app events are primary**, sent by the
+   Meta SDK or by the MMP (one of the two per event, not both), with the MMP
+   connected as a data source and the value event mapped to a standard event; any
+   third-party SKAN-management layer you don't need turned off. Pixel + server-side
+   Conversions API (deduplicated via event ID) only for flows that happen on the web
+   (a web sign-up, a web-to-app funnel).
 3. Domain verification in brand safety settings.
 4. Special ad category declared if your vertical requires it (e.g. financial
    products/services). Check Meta's current docs first: the developer docs for
@@ -473,8 +568,9 @@ Run when taking over an account, launching a new market, or at least quarterly.
 - Requests: **one single SKAN conversion value writer** (MMP, Meta SDK or app, never
   several); a pipeline writing the campaign name from the referrer into your own
   database (Android), and for iOS a daily campaign ID to name table pulled read-only
-  from the Marketing API; **Conversions API** for the value event, deduplicated via
-  event ID.
+  from the Marketing API; if the value event happens on the server, send it once,
+  through the MMP's server-to-server events or Meta's Conversions API for app
+  events, deduplicated against any SDK copy of the same event.
 - Hypothesis worth checking when iOS reporting collapses: SKAN values come back null
   below Apple's privacy thresholds, so many small OS x market campaigns make it
   worse; consolidation helps more than config.
@@ -485,11 +581,16 @@ Run when taking over an account, launching a new market, or at least quarterly.
   targeting, your real levers are audience *signals* (seed audience) and
   *exclusions*. Always exclude existing installed users/converters.
 - Custom audiences/lookalikes are a signal input to automated expansion, not a hard
-  fence; under a restricted ad category, standard lookalikes are usually replaced by
-  a "special ad audience" equivalent.
-- **What a restricted ad category (e.g. financial products) typically removes**:
-  granular geo (down to postal code), forces a full age range, removes gender
-  exclusion, removes standard lookalikes, restricts detailed/interest targeting.
+  fence. Under a **special ad category** (Meta's term; financial products and
+  services became one in the US in January 2025, other regions differ), lookalike
+  audiences are not available, and the older "special ad audience" replacement can
+  no longer be created (Meta retired it from Marketing API v15.0). Check Meta's
+  current Special Ad Categories page for your region before planning audiences.
+- **What a special ad category typically removes**: granular geo (down to postal
+  code), forces a full age range, removes gender targeting, removes lookalikes,
+  restricts detailed targeting and its exclusions. Customer-list custom audiences
+  are, per Meta's docs at the time of writing, still allowed. Rules differ by region
+  and change; the docs, not this list, decide.
 - Geo-targeting for offline/local campaigns is generally not subject to the same
   restriction, radius targeting from roughly city to metro scale.
 
@@ -521,8 +622,10 @@ Run when taking over an account, launching a new market, or at least quarterly.
 Maximum lengths and file sizes per placement change; check Meta's Ads Guide for the
 placement before building, the table is for layout decisions, not limits.
 
-- Safe zones: top ~14% and bottom ~20-35% of a 9:16 canvas sit under UI overlays,
-  sides ~6% are clear.
+- Safe zones on a 9:16 canvas, used by the creative QA for both platforms: keep text
+  and logos out of the top 14 %, the bottom 35 % and 6 % on each side. The bottom
+  35 % is the Reels value; Stories cover less (around 20 %), but one conservative set
+  of numbers keeps a single asset safe in both.
 - Copy limits (recommended visible length vs. hard max): primary text ~125/500
   characters; headline ~40/255; description ~30/200. Front-load the main message
   into the first ~30-40 characters of each field.
@@ -536,7 +639,9 @@ placement before building, the table is for layout decisions, not limits.
 - Build creatives in-house per Creative production above, then QA plus human review.
 
 ### Phase 5: Pre-launch QA
-- [ ] Test events fired, pixel/CAPI deduplication confirmed
+- [ ] Test app events arrive from a real test device (SDK or MMP) and the value
+      event maps to its standard event; for web flows, pixel/CAPI deduplication
+      confirmed
 - [ ] Safe zones respected
 - [ ] Generated creatives passed automated QA and a human review; concepts genuinely
       differ
@@ -559,9 +664,12 @@ checking for other people's broken drafts before each step.
 ### Phase 7: Ongoing optimization
 - **Frequency/fatigue**: prospecting gets risky above ~2.5, drops off above ~4.0;
   retargeting is safe to ~4-6, drops off above ~7-8
-- **Refresh trigger (combined)**: frequency >3.5 (7-day) **and** CTR -25% **and**
-  CPM +35% = burned out. A 15-20% CTR drop over 7-14 days means start preparing a
-  refresh early. Cadence: cold audiences every 2-3 weeks, retargeting every 1-2
+- **Refresh signal (diagnostic, combined)**: frequency >3.5 (7-day) **and** CTR
+  -25 % **and** CPM +35 % = the creative is likely burned out, so new creative goes
+  into production. A 15-20 % CTR drop over 7-14 days means start preparing a refresh
+  early. These signals decide what creative work to do next; whether to pause, scale
+  or move budget is still decided on the value event (Event/optimization priority,
+  guardrail 8). Cadence: cold audiences every 2-3 weeks, retargeting every 1-2
   weeks.
 - **Budget rebalancing**: weekly, not daily
 - **Budget changes**: max 15-20 % once every 3-4 days, judge after 5-7 days, and
@@ -574,22 +682,20 @@ checking for other people's broken drafts before each step.
 - **Attribution windows**: Meta removed the 7-day view and 28-day view windows from
   the Ads Insights API on 2026-01-12; queries return empty data, not an error. Don't compare reporting across
   that date without adjusting
-- **Account quality + pixel diagnostics**: weekly; flag low match-quality scores;
+- **Account quality + event diagnostics**: weekly (app events in Events Manager; for web flows, pixel/CAPI match quality); flag low match-quality scores;
   48 hours with no data = an active outage
 - **Competitive ad-library research**: quick daily scan, deeper weekly review,
   monthly summary. In the EU (Digital Services Act) the ad library shows all ads
   served in the EU, not just political ones; official library/API only, no scrapers
 - **Monthly research scan**: see Learning loop
-- **Audit of an inherited account** (on takeover, quarterly, or on an unexplained
-  cost-per-result jump): (1) pixel/CAPI health, (2) structure/fragmentation, (3)
-  learning-phase status, (4) creative volume and fatigue, (5) audience/exclusion
-  sanity, (6) attribution-window consistency, (7) budget pacing, (8) competitive
-  benchmark. **Check copy on old campaigns separately from structure**: an
-  inherited campaign can carry outdated positioning a rebuild never touched.
+- **Audit of an inherited account**: the Phase 0 checklist above (Business Portfolio
+  and ad account parts), plus a competitive benchmark from the Ad Library.
 - Report on a fixed cadence (e.g. every 3-4 days), leading with your real
   downstream conversion metric, not platform vanity metrics.
-- Hook-first framework for creative testing: a matrix of hooks × angles, decide
-  within 24h based on hook-rate + CPA.
+- Hook-first framework for creative testing: a matrix of hooks × angles. Hook rate
+  and early CPA after 24 h are diagnostics for which hooks deserve the next round of
+  creative work; they are not grounds to pause, scale or reallocate. Those decisions
+  wait for the value event at a volume that means something (guardrail 8).
 - Append a short execution log at the end of each work session.
 - Append any newly discovered UI bug to your known-bugs doc.
 
@@ -646,19 +752,32 @@ working files are in [`ads-ops/`](ads-ops/README.md).
   each with the date the owner confirmed it. Older than 30 days = stale, and a
   missing number is a question, never a default the agent picks itself. A monthly
   check-in sends all questions in one message.
-- **Change ledger before every live change.** Old value (read from the UI), new value,
-  why, who approved, and a rollback trigger (number + date). The script refuses an
-  entry without the old value, the approval or the trigger. After the change: reload,
-  read back, mark it verified; at the trigger date: keep or roll back.
-  `ledger rollback <id>` prints the way back, which is itself a new, approved,
-  ledgered change.
+- **Change ledger before every live change.** The agent writes the row: old value
+  (read from the UI), new value, why, a rollback trigger and a review date
+  (`--review-by`). The owner approves it with `ledger approve <id> --by <name>`, a
+  separate command the agents are told never to run. The script enforces the order
+  planned → approved → done → verified → kept / rolled back: no `done` before an
+  approval, no `verify` before `done`. Verified rows whose review date has passed
+  show up in `due` until someone keeps or rolls them back. `ledger rollback <id>`
+  prints the way back, which is itself a new, approved, ledgered change.
+- **What the script enforces and what it doesn't.** It enforces the ledger's own
+  bookkeeping: required fields, the status order, an approval recorded by a separate
+  command with a name and a timestamp. It cannot see the ad account, so it cannot
+  stop anyone from making a change in the UI without a row, and it cannot prove that
+  the person who ran `approve` was the owner (anyone with a shell can run it or edit
+  the file). Those two parts are procedure: the guardrails, the agent instructions,
+  and a tool list that leaves the agent without write access to the account unless
+  you add it.
 - **Snapshots** of account state (CSV / Ads Manager exports) before every audit and
   every bigger change, so "what did it look like before" never depends on platform
   history. Meta's Activity history shows old values but has no undo.
 - **Automatic file versions.** A `PreToolUse` hook copies every protected file (agent
   definitions, skills, goals, playbook, status files) to `.versions/` before it is
   edited, only when the content changed. Any earlier version can be restored, and the
-  current one is versioned first.
+  current one is versioned first. The hook only sees the Edit/Write tools: a change
+  made through a shell command is not versioned, which is why `ads_ops.py done`
+  versions `cadence.json` itself before rewriting it. Only the last N versions per
+  file are kept (`versions_keep` in `cadence.json`, default 50).
 - **Hard safety limits:** read-only by default; budget steps of about 20 % with a few
   days between them; never over a ceiling; pause instead of starving a campaign below
   its learning threshold; pause, never delete; check the platform's change history
@@ -668,8 +787,10 @@ working files are in [`ads-ops/`](ads-ops/README.md).
   unattended routines never change anything.
 - **Language gate.** Every ad text in every language passes a spelling and grammar
   check (`ads-ops/langcheck_ads.py`: Hunspell with LibreOffice dictionaries, a local
-  LanguageTool server, Korektor for Czech) before upload; exit 1 = not uploaded. The
-  tools don't judge tone or claims, so a person still reads it.
+  LanguageTool server, and with `--online` Korektor for Czech) before upload; exit 1
+  = findings, exit 3 = some text was not checked by every tool that ran; either way
+  it is not uploaded. The tools don't judge tone or claims, so a person still reads
+  it.
 - **Weekly radar.** An optional scheduled, read-only routine scans the watchlist
   (`ads-ops/watchlist.md`: official MCPs and SDKs, optimisation repos such as Meridian
   and Robyn, language-QA repos, platform changelogs, trends, industry reports,

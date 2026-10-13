@@ -2,3 +2,5 @@
 ads-ops/snapshots/*/
 __pycache__/
 ads-ops/dicts/
+ads-ops/.ads_ops.lock
+ads-ops/.*.tmp

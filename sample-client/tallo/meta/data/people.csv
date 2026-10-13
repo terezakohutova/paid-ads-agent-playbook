@@ -1,0 +1,7 @@
+portfolio,person,email,role,two_factor
+Tallo CZ,Owner,owner@tallo.example,Full control (admin),On
+Tallo CZ,Marek,marek@tallo.example,Partial access: ad accounts (advertiser),On
+Tallo CZ,Finance,finance@tallo.example,Partial access: ad accounts (analyst),On
+Tallo PL,Owner,owner@tallo.example,Full control (admin),On
+Tallo PL,Agnieszka,agnieszka@tallo.example,Full control (admin),On
+Tallo PL,Marek,marek@tallo.example,Partial access: ad accounts (advertiser),On

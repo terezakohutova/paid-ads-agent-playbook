@@ -3,25 +3,30 @@
 
 Read-only, it never changes the copy. Exit codes, so it can gate an upload the
 same way creative QA does:
-    0  every text checked by at least one tool, nothing found
+    0  every text was checked by every tool that ran, nothing found
     1  findings (do not upload)
-    2  usage error (no texts, no language)
-    3  nothing was actually checked (no dictionary, no LanguageTool server, Korektor
-       off or unreachable). Fails closed: "no tool ran" is never reported as clean.
-       --allow-unchecked turns this into exit 0 for a deliberate dry run.
+    2  usage error (no texts, no language, a spec file with no recognised copy field)
+    3  not fully checked: no tool ran at all, or a tool that ran failed part way and
+       left some texts unchecked by it. Fails closed: a partial check is never
+       reported as clean. --allow-unchecked turns this into exit 0 for a deliberate
+       dry run (the gap is still printed).
 
     python -I ads-ops/langcheck_ads.py copy.json            # {"market": "pl", "copy": ["...", "..."]}
-    python -I ads-ops/langcheck_ads.py spec.json            # any JSON with a "market"/"lang" key: headline, cta, primary_text, ... are collected
+    python -I ads-ops/langcheck_ads.py spec.json            # any JSON with a "market"/"lang" key, see COPY_KEYS
     python -I ads-ops/langcheck_ads.py --lang de "Text 1" "Text 2"
-    add --no-online to skip Korektor (the only tool that sends text out)
-    add --allow-unchecked to exit 0 even when no checker is available (dry run only)
+    add --online to also use Korektor for Czech (the only tool that sends text out)
+    add --allow-unchecked to exit 0 even when not every text was checked (dry run only)
 
 Tools (each one is optional, a missing one is reported, not fatal):
   - Hunspell via spylls (pip install spylls) + LibreOffice dictionaries
     (github.com/LibreOffice/dictionaries; put the .aff/.dic files in LANGTOOLS_DICTS).
   - LanguageTool, level=picky, local HTTP server (LT_URL, default http://localhost:8081/v2/check).
-    It has no Czech, so Czech gets Hunspell + Korektor.
-  - Korektor (UFAL, LINDAT REST API) for Czech spelling and diacritics.
+    It has no Czech, so Czech gets Hunspell (+ Korektor with --online).
+  - Korektor (UFAL, LINDAT REST API) for Czech spelling and diacritics. Off unless
+    --online is given: it sends the ad text to an external server. Per the LINDAT
+    service pages at the time of writing, the Korektor models are licensed CC BY-NC-SA
+    (commercial use needs permission from the authors) and submitted text may be
+    logged by the service. Check the current terms before using it on client copy.
 Extra words that are fine on purpose (brand, product, feature names): one per line in
 ads-ops/langcheck-ignore.txt.
 """
@@ -35,7 +40,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 DICTS = os.environ.get('LANGTOOLS_DICTS') or os.path.join(HERE, 'dicts')
 LT_URL = os.environ.get('LT_URL') or 'http://localhost:8081/v2/check'
-KOREKTOR = 'https://lindat.mff.cuni.cz/services/korektor/api/correct'
+KOREKTOR = os.environ.get('KOREKTOR_URL') or 'https://lindat.mff.cuni.cz/services/korektor/api/correct'
 
 MARKET_LANG = {'cz': 'cs', 'cs': 'cs', 'sk': 'sk', 'pl': 'pl', 'de': 'de', 'at': 'de', 'ch': 'de',
                'en': 'en', 'uk': 'en', 'gb': 'en', 'eu': 'en', 'es': 'es', 'fr': 'fr', 'it': 'it',
@@ -67,8 +72,18 @@ LT_DISABLED = ','.join([
     'EN_UNPAIRED_QUOTES', 'ES_QUOTES', 'IT_QUOTES', 'FR_QUOTES', 'PL_QUOTES', 'SK_QUOTES',
     'ELLIPSIS', 'BRAK_KROPKI', 'POINT', 'COMILLAS_TIPOGRAFICAS', 'TYPOGRAFISCHE_APOSTROPHE',
 ])
-TEXT_KEYS = ('headline', 'headlines', 'sub', 'subline', 'cta', 'text', 'copy', 'primary_text',
-             'description', 'descriptions', 'long_headline')
+# Keys whose string values (or lists of strings) are ad copy, wherever they sit in the JSON.
+#   generic / creative specs: headline, sub, subline, cta, text, copy, primary_text
+#   Google: headlines, descriptions, long_headline(s), description
+#   Meta Marketing API: message (primary text), body/bodies, title/titles, link_description,
+#   description(s); asset_feed_spec lists hold {"text": ...} objects, collected via "text".
+COPY_KEYS = ('headline', 'headlines', 'sub', 'subline', 'cta', 'text', 'copy', 'primary_text',
+             'primary_texts', 'description', 'descriptions', 'long_headline', 'long_headlines',
+             'message', 'body', 'bodies', 'title', 'titles', 'link_description')
+# "name" is the headline inside Meta's link_data and carousel cards, but an internal
+# ad/campaign name everywhere else, so it only counts under these parents.
+NAME_IS_COPY_UNDER = ('link_data', 'child_attachments', 'template_data')
+TEXT_KEYS = COPY_KEYS                                         # backwards-compatible alias
 
 
 def ignored(w):
@@ -76,26 +91,30 @@ def ignored(w):
 
 
 def collect(path):
-    """Return (lang, [texts]) from any JSON with a market/lang key."""
+    """Return (lang, [texts], {unrecognised string keys}) from any JSON with a market/lang key."""
     with open(path, encoding='utf-8') as f:
         d = json.load(f)
-    lang = MARKET_LANG.get(str(d.get('market', d.get('lang', ''))).lower())
-    texts = []
+    lang = MARKET_LANG.get(str(d.get('market', d.get('lang', ''))).lower()) if isinstance(d, dict) else None
+    texts, other = [], set()
 
-    def walk(x, key=''):
+    def walk(x, key='', parents=()):
         if isinstance(x, dict):
             for k, v in x.items():
-                walk(v, k)
+                walk(v, k, parents + (key,))
         elif isinstance(x, list):
             for v in x:
-                walk(v, key)
-        elif isinstance(x, str) and key in TEXT_KEYS:
-            texts.append(x)
+                walk(v, key, parents)
+        elif isinstance(x, str):
+            if key in COPY_KEYS or (key == 'name' and any(p in NAME_IS_COPY_UNDER for p in parents)):
+                texts.append(x)
+            elif key not in ('market', 'lang'):
+                other.add(key)
     walk(d)
-    return lang, texts
+    return lang, texts, other
 
 
 def unknown_words(texts, lang):
+    """{text: {word: text}} per text, or None when Hunspell is not available."""
     name = HUNSPELL.get(lang)
     if not name or not os.path.exists(os.path.join(DICTS, name + '.aff')):
         return None
@@ -106,15 +125,17 @@ def unknown_words(texts, lang):
     d = Dictionary.from_files(os.path.join(DICTS, name))
     out = {}
     for t in texts:
-        t = re.sub(r'\S+@\S+|https?://\S+|\b[\w.-]+\.[a-z]{2,4}\b\S*', ' ', t)
-        for w in re.findall(r"[^\W\d_]+(?:['’][^\W\d_]+)*", t):
+        found = {}
+        clean = re.sub(r'\S+@\S+|https?://\S+|\b[\w.-]+\.[a-z]{2,4}\b\S*', ' ', t)
+        for w in re.findall(r"[^\W\d_]+(?:['’][^\W\d_]+)*", clean):
             if len(w) < 2 or ignored(w) or (w.isupper() and len(w) <= 6):
                 continue
             ok = d.lookup(w) or (w[0].isupper() and d.lookup(w.lower()))
             if not ok and re.search(r"['’]", w):
                 ok = all(d.lookup(p) or ignored(p) for p in re.split(r"['’]", w) if len(p) > 1)
             if not ok:
-                out.setdefault(w, t)
+                found.setdefault(w, t)
+        out[t] = found
     return out
 
 
@@ -135,6 +156,22 @@ def korektor(text):
     return [(x, y) for x, y in zip(a, b) if x != y]
 
 
+def run_per_text(name, texts, check, report):
+    """Run one tool text by text. Returns the set of texts it actually checked.
+    On the first failure it stops (the server is most likely gone) and says how far it got."""
+    done = set()
+    for t in texts:
+        try:
+            result = check(t)
+        except Exception as e:
+            print(f'[{name}] failed after {len(done)} of {len(texts)} texts ({e.__class__.__name__}); '
+                  f'the rest are NOT checked by {name}')
+            break
+        done.add(t)
+        report(t, result)
+    return done
+
+
 def main(argv):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -143,9 +180,9 @@ def main(argv):
     if argv and argv[0] in ('-h', '--help'):
         print(__doc__)
         return 0
-    online = '--no-online' not in argv
+    online = '--online' in argv
     allow_unchecked = '--allow-unchecked' in argv
-    argv = [a for a in argv if a not in ('--no-online', '--allow-unchecked')]
+    argv = [a for a in argv if a not in ('--online', '--no-online', '--allow-unchecked')]   # --no-online: old default, now a no-op
     if not argv:
         print(__doc__)
         return 2
@@ -153,65 +190,85 @@ def main(argv):
         if len(argv) < 2:
             print('usage: --lang <code> "text" ...')
             return 2
-        lang, texts = MARKET_LANG.get(argv[1].lower(), argv[1].lower()), argv[2:]
+        lang, texts, other = MARKET_LANG.get(argv[1].lower(), argv[1].lower()), argv[2:], set()
     else:
-        lang, texts = collect(argv[0])
+        lang, texts, other = collect(argv[0])
     if not lang:
         print('no market/lang in the file; pass --lang')
         return 2
     texts = [t for t in dict.fromkeys(texts) if t.strip()]
     if not texts:
-        print(f'no ad texts found (looked for keys: {", ".join(TEXT_KEYS)})')
+        print(f'no ad copy found (recognised keys: {", ".join(COPY_KEYS)}, and "name" under '
+              f'{", ".join(NAME_IS_COPY_UNDER)}).' + (f' Keys seen: {", ".join(sorted(other))}.' if other else '')
+              + ' Nothing was checked.')
         return 2
     problems = 0
-    ran = []                                  # tools that actually checked the texts
+    coverage = {}                              # tool -> set of texts it actually checked
 
     unk = unknown_words(texts, lang)
     if unk is None:
         print(f'[hunspell] skipped: no spylls or no {HUNSPELL.get(lang, lang)} dictionary in {DICTS}')
     else:
-        ran.append('hunspell')
-        for w, ctx in unk.items():
-            problems += 1
-            print(f'[hunspell] unknown "{w}"  in: {ctx}')
+        coverage['hunspell'] = set(unk)
+        for t, found in unk.items():
+            for w in found:
+                problems += 1
+                print(f'[hunspell] unknown "{w}"  in: {t}')
 
     ltl = LT_LANG.get(lang)
     if ltl:
-        try:
-            for i, t in enumerate(texts):
-                matches = lt_check(t, ltl)
-                if i == 0:
-                    ran.append('languagetool')
-                for x in matches:
-                    bad = t[x['offset']:x['offset'] + x['length']]
-                    if ignored(bad):
-                        continue
-                    problems += 1
-                    sug = ', '.join(r['value'] for r in x['replacements'][:3])
-                    print(f"[languagetool] {x['rule']['id']}: \"{bad}\" -> {sug or '?'}  ({x['message']})  in: {t}")
-        except Exception as e:
-            print(f'[languagetool] not reachable at {LT_URL} ({e.__class__.__name__}), grammar NOT checked')
+        def lt_report(t, matches):
+            nonlocal problems
+            for x in matches:
+                bad = t[x['offset']:x['offset'] + x['length']]
+                if ignored(bad):
+                    continue
+                problems += 1
+                sug = ', '.join(r['value'] for r in x['replacements'][:3])
+                print(f"[languagetool] {x['rule']['id']}: \"{bad}\" -> {sug or '?'}  ({x['message']})  in: {t}")
+        got = run_per_text('languagetool', texts, lambda t: lt_check(t, ltl), lt_report)
+        if got:
+            coverage['languagetool'] = got
+        else:
+            print(f'[languagetool] not reachable at {LT_URL}, grammar NOT checked')
 
-    if lang == 'cs' and online:
-        for i, t in enumerate(texts):
-            try:
-                fixes = korektor(t)
-                if i == 0:
-                    ran.append('korektor')
+    if lang == 'cs':
+        if online:
+            def k_report(t, fixes):
+                nonlocal problems
                 for a, b in fixes:
                     if ignored(a.strip('.,!?:;"()')):
                         continue
                     problems += 1
                     print(f'[korektor] "{a}" -> "{b}"  in: {t}')
-            except Exception as e:
-                print(f'[korektor] not reachable ({e.__class__.__name__}), Czech checked by dictionary only')
-                break
+            got = run_per_text('korektor', texts, korektor, k_report)
+            if got:
+                coverage['korektor'] = got
+            else:
+                print('[korektor] not reachable, Czech NOT checked by Korektor')
+        else:
+            print('[korektor] off (it sends text to an external server; pass --online to use it)')
 
-    if not ran:
-        print(f'{len(texts)} texts in {lang}: NOT CHECKED, no spelling or grammar tool was available '
-              '(see the setup in the docstring).' + (' Allowed by --allow-unchecked.' if allow_unchecked else ' Do not upload.'))
+    # A text counts as checked only if every tool that ran checked it.
+    unchecked = [t for t in texts if not coverage or any(t not in got for got in coverage.values())]
+    tools = ' + '.join(coverage)
+    if unchecked:
+        if not coverage:
+            print(f'{len(texts)} texts in {lang}: NOT CHECKED, no spelling or grammar tool was available '
+                  '(see the setup in the docstring).')
+        else:
+            for name, got in coverage.items():
+                if len(got) < len(texts):
+                    print(f'[{name}] checked {len(got)} of {len(texts)} texts')
+            print(f'{len(unchecked)} of {len(texts)} texts in {lang} NOT CHECKED by every tool that ran ({tools}):')
+            for t in unchecked:
+                print(f'  - {t}')
+        if problems:
+            print(f'{problems} findings in the texts that were checked.')
+            return 1
+        print('Allowed by --allow-unchecked.' if allow_unchecked else 'Do not upload.')
         return 0 if allow_unchecked else 3
-    print(f'{len(texts)} texts checked in {lang} with {" + ".join(ran)}: '
+    print(f'{len(texts)} texts checked in {lang} with {tools}: '
           + ('clean' if not problems else f'{problems} findings'))
     print('Tools do not judge tone, claims or brand rules: read every text yourself too.')
     return 1 if problems else 0

@@ -1,0 +1,11 @@
+account,campaign,campaign_type,status,budget_eur_day,bid_strategy,target_eur,start_date,last_edited,cost_30d_eur,impressions_30d,clicks_30d,conversions_30d,brand_exclusions
+CZ,CZ_SEARCH_brand_core_2503,Search,Enabled,30,Target impression share,,2025-03-03,2025-11-20,512,18420,3105,402,n/a
+CZ,CZ_SEARCH_acq_generic_2311,Search,Enabled,60,Maximize conversions,,2023-11-06,2023-11-06,1786,61200,2240,96,n/a
+CZ,CZ_APP_acq_install_2505,App,Enabled,150,Target CPI,3.80,2025-05-12,2026-09-15,4390,912000,10940,1240,n/a
+CZ,CZ_PMAX_acq_web_2509,Performance Max,Enabled,40,Maximize conversions,,2025-09-08,2026-09-02,1180,240500,3310,214,none
+CZ,CZ_APP_acq_giveaway_2412,App,Paused,90,Target CPI,4.00,2024-12-02,2025-01-31,0,0,0,0,n/a
+SK,SK_SEARCH_brand_core_2503,Search,Enabled,10,Target impression share,,2025-03-03,2025-11-20,141,4020,690,88,n/a
+SK,SK_APP_acq_promo_2508,App,Enabled,70,Target CPI,3.20,2025-08-04,2026-10-02,1650,388000,4120,402,n/a
+PL,PL_SEARCH_brand_core_2509,Search,Enabled,15,Target impression share,,2025-09-15,2026-09-29,322,9100,1210,131,n/a
+PL,PL_APP_acq_promo_2509,App,Enabled,90,Target CPI,2.90,2025-09-15,2026-09-22,2210,510000,6020,704,n/a
+PL,PL_APP_acq_dowod_spoleczny_2509,App,Enabled,50,Target CPI,2.90,2025-09-15,2025-09-15,1370,296000,3480,451,n/a

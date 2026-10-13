@@ -9,8 +9,8 @@ several markets and legal entities.
 
 - **[`google-ads`](.claude/agents/google-ads.md) and [`facebook-ads`](.claude/agents/facebook-ads.md)**: drop-in agent files. Audit-only by default (`Read, Grep, Glob`).
 - **[The playbook](paid-ads-agent-playbook.md)**: the full ruleset both agents point to. Every guardrail is a mistake that actually happened once (a placeholder budget used for real, a banned claim copied into a second market, a local-language token in an English naming scheme).
-- **[`ads-ops/`](ads-ops/README.md)**: what makes the agents safe to run every week. A cadence with overdue reminders, a change ledger that refuses a live change without the old value, an approval and a rollback trigger, automatic versions of the agent files, and a language gate for ad copy that fails closed.
-- **[A worked example](sample-client/vela-invest/audit-output.md)** with its evidence: a fictional account with seven planted issues, the audit, and the [unedited blind run](sample-client/vela-invest/blind-run-2026-10-13.md) it was checked against.
+- **[`ads-ops/`](ads-ops/README.md)**: the scripts and files for running the agents every week. A cadence with overdue reminders, a change ledger, automatic versions of the agent files, and a language gate for ad copy. What each one enforces and what stays procedure is spelled out below.
+- **[A test account with a known answer](sample-client/tallo/README.md)**: fictional Google Ads and Meta exports with 16 and 12 planted issues, an answer key, and three unedited blind runs scored for precision and recall, including what the numbers don't show.
 
 It is extracted from a real production setup and anonymized: company names,
 account IDs, internal links and people's names are removed or replaced with
@@ -18,28 +18,24 @@ placeholders.
 
 ## Try it in five minutes
 
-![Excerpt of the google-ads agent's audit of the fictional sample account](sample-client/vela-invest/preview.png)
-
 1. Copy `.claude/agents/google-ads.md` into your own project's `.claude/agents/`.
    No editing needed to try it; the placeholders only matter once you point it at
    your own account.
-2. Ask: "audit the Google Ads account in `sample-client/vela-invest/data/`".
-3. Compare with [`audit-output.md`](sample-client/vela-invest/audit-output.md). Each
-   finding cites the rule that catches it, and the
-   [blind run](sample-client/vela-invest/blind-run-2026-10-13.md) shows what a fresh
-   agent with only the agent file and the CSVs found, including where it disagreed
-   and why.
+2. Ask: "audit the Google Ads account in `sample-client/tallo/google/data/`".
+3. Compare with the [answer key](sample-client/tallo/answer-key.md) and with the
+   [blind runs](sample-client/tallo/blind-runs/), where fresh agents with only the
+   agent file and the CSVs did the same.
 
 ## What is in the repo
 
 | Path | What |
 |---|---|
-| [`paid-ads-agent-playbook.md`](paid-ads-agent-playbook.md) | Shared conventions (entities, naming, starter pack, measurement, creative production, event priority, guardrails, budget rules), then Phase 0-7 for each platform, the learning loop and the ops layer |
+| [`paid-ads-agent-playbook.md`](paid-ads-agent-playbook.md) | Shared conventions (entities, naming, starter pack, briefs, measurement, creative production, event priority, guardrails 1-16, budget rules), then Phase 0-7 for each platform, the learning loop and the ops layer |
 | [`.claude/agents/`](.claude/agents/) | The two subagents: operating summary, guardrails, Phase 0 audit checklist, output format |
 | [`.claude/skills/ads-research-scan/`](.claude/skills/ads-research-scan/SKILL.md) | Monthly scan of changelogs, practitioner sources and GitHub, logged as hypotheses, never installed on the spot |
 | [`ads-ops/`](ads-ops/README.md) | `cadence.json`, `goals.md`, change ledger, watchlist, learnings, `ads_ops.py`, `langcheck_ads.py`, hook config |
-| [`sample-client/vela-invest/`](sample-client/vela-invest/README.md) | Fictional account as CSV exports, the audit, the blind run |
-| [`tests/`](tests/) | 41 standard-library tests for both scripts and for repo integrity (links, agent frontmatter, sample data vs. audit), run on Linux, macOS and Windows by [CI](.github/workflows/tests.yml) |
+| [`sample-client/tallo/`](sample-client/tallo/README.md) | Fictional accounts as CSV exports, answer key, blind runs, `score.py` |
+| [`tests/`](tests/) | 73 standard-library tests: both scripts, repo integrity (links, agent frontmatter, agents in sync with the playbook checklists and with each other), and the sample (data vs. key, verbatim quotes in the scoring, scores vs. README), run on Linux, macOS and Windows by [CI](.github/workflows/tests.yml) |
 
 ## Using it for real
 
@@ -53,28 +49,27 @@ placeholders.
    = no multi-entity billing rules).
 5. Optional: copy `ads-ops/` next to `.claude/` and merge its hooks (below).
 
-## Running it on a schedule, safely
+## Running it on a schedule: what is enforced and what is procedure
 
-- `cadence.json` + a `SessionStart` hook: weekly checks, monthly audits of each
-  account and of measurement, a monthly research scan, a quarterly access audit.
-  The session lists what is overdue and offers it; nothing live runs on its own.
-- `goals.md`: goals, budget ceilings and the optimisation target, confirmed by the
-  owner and stale after 30 days, so the agents ask instead of guessing.
-- `ads_ops.py ledger`: every live change is written down first with the old value,
-  the approval and a rollback trigger; `ledger rollback <id>` prints the way back.
-- A `PreToolUse` hook versions every agent, skill and goals file before each edit,
-  restorable with `ads_ops.py restore`.
-- `langcheck_ads.py`: Hunspell + LanguageTool (+ Korektor for Czech) before any ad
-  copy is uploaded. Exit 1 on findings, exit 3 when no checker was available, so a
-  missing dictionary never passes as "clean".
+| Piece | Enforced by code | Procedure only |
+|---|---|---|
+| Cadence (`cadence.json` + `SessionStart` hook) | Lists overdue tasks and open ledger rows at every session start | Whether anyone acts on the list |
+| Goals (`goals.md`) | Nothing | Agents are told to ask when a goal is missing or older than 30 days |
+| Change ledger (`ads_ops.py ledger`) | A row needs old value, new value, rollback trigger and a review date; the approval is recorded by a separate `ledger approve <id> --by <name>` with a timestamp; status order planned > approved > done > verified > kept/rolled back (no `done` before approval, no `verify` before `done`); verified rows past their review date show in `due` | That the change in the ad account was made only after an approved row (the script never sees the account), and that `approve` was run by the owner (agents are told never to run it; anyone with a shell can) |
+| File versions (`PreToolUse` hook) | Agent, skill, goals and playbook files are copied to `.versions/` before every Edit/Write; last 50 per file kept; `ads_ops.py done` versions `cadence.json` itself | Edits made through shell commands are not seen by the hook |
+| Language gate (`langcheck_ads.py`) | Exit 1 on findings, exit 3 when any text was not checked by every tool that ran; Meta and Google copy fields collected; a spec with no copy field is exit 2 | A person still reads tone, claims and brand rules |
+
+The tool list is the other half: with the default `Read, Grep, Glob` the agents
+cannot change an account at all.
 
 ## Requirements
 
 Claude Code for the agents. Python 3.9+ for the scripts, standard library only;
-the language check optionally uses `spylls`, LibreOffice dictionaries and a local
-LanguageTool server. Commands are written as `python`; use `python3` where that is
-the name on your system (macOS, most Linux). Run the tests with
-`python -m unittest discover -s tests`.
+the language check optionally uses `spylls`, LibreOffice dictionaries, a local
+LanguageTool server, and, only with `--online`, the external Korektor service for
+Czech (see its terms in [`ads-ops/README.md`](ads-ops/README.md)). Commands are
+written as `python`; use `python3` where that is the name on your system (macOS,
+most Linux). Run the tests with `python -m unittest discover -s tests`.
 
 ## License
 

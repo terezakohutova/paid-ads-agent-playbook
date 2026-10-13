@@ -1,0 +1,11 @@
+account,conversion_action,source,category,count,goal_role,attribution_model,status,conversions_30d
+CZ,Install (MMP),Third-party app analytics,Download,One,Primary,Last click,Recording conversions,1240
+CZ,Registration (MMP),Third-party app analytics,Sign-up,One,Secondary,Last click,Recording conversions,611
+CZ,First Deposit (MMP),Third-party app analytics,Purchase,One,Secondary,Last click,Recording conversions,38
+CZ,Web sign-up,Website,Sign-up,One,Primary,Data-driven,Recording conversions,214
+SK,Install (MMP),Third-party app analytics,Download,One,Primary,Last click,Recording conversions,402
+SK,Registration (MMP),Third-party app analytics,Sign-up,One,Secondary,Last click,Recording conversions,170
+SK,First Deposit (MMP),Third-party app analytics,Purchase,One,Secondary,Last click,Recording conversions,9
+PL,Install (MMP),Third-party app analytics,Download,One,Primary,Last click,Recording conversions,49
+PL,first_open (Firebase),Firebase,Download,One,Primary,Last click,Recording conversions,655
+PL,Registration (MMP),Third-party app analytics,Sign-up,One,Secondary,Last click,Recording conversions,22

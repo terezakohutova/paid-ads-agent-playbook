@@ -1,0 +1,26 @@
+{
+ "key": "meta",
+ "scored_by": "the repo author, by hand, after the run; every excerpt is a verbatim quote from output.md (a test checks this)",
+ "unit": "one FAIL finding: a distinct problem the run marked FAIL, wherever it sits in the output",
+ "findings": [
+  {"excerpt": "Tallo CZ has exactly one admin (Owner). Guardrail 18.", "label": "M1"},
+  {"excerpt": "Brightlane Media has \"Full control of the business portfolio\" on Tallo CZ. Guardrail 17.", "label": "M2"},
+  {"excerpt": "A card shared across portfolios and entities.", "label": "M3"},
+  {"excerpt": "Two sources for one event, likely double-counted or at least not deduplicated.", "label": "M4"},
+  {"excerpt": "`first_deposit` (63 events in 7d) is \"Not mapped (custom event)\"", "label": "M5"},
+  {"excerpt": "Consolidation is the finding (hooks are better tested as ads inside fewer ad sets)", "label": "M6"},
+  {"excerpt": "All six SK ad sets are \"Learning limited\"", "label": "M6", "note": "Same planted issue as the line above (fragmentation causes learning limited); counted once for recall, and as a matching finding for precision."},
+  {"excerpt": "Frequency 5.6 over 7d, above the ~4 drop-off line.", "label": "M7"},
+  {"excerpt": "`PL_acq_promo_2509_android` (EUR 100/day, the biggest ad set in the account) has an empty `excluded_audiences`", "label": "M8"},
+  {"excerpt": "A guaranteed return on ETF portfolios is a restricted, almost certainly false financial claim (guardrail 4)", "label": "M9"},
+  {"excerpt": "(b) 2026-10-01 PL android EUR 40 to 100 (+150 %) by Marek (advertiser): no ledger row", "label": "M10"},
+  {"excerpt": "`CZ_acq_winter_2510_android` is \"1-day click\", every other ad set is \"7-day click\"", "label": "M11"},
+  {"excerpt": "`PL_acq_dowod_spoleczny_2509` is a Polish token", "label": "M12"},
+  {"excerpt": "(c) 2026-09-24 SK: 6 ad sets created, no ledger row.", "label": "extra-valid", "note": "Not planted as such; creating live ad sets is a live change without a ledger row (guardrail 11)."},
+  {"excerpt": "The same ad also runs a prize draw (iPhone 17, registration until 31.10) for a financial product.", "label": "extra-valid", "note": "Present in the data (the PL ad text) but not in the Meta key; a fair compliance flag."}
+ ],
+ "not_counted": [
+  {"excerpt": "**Risk warning missing.**", "why": "Raised inside the compliance detail as a question for a compliance call, not as its own FAIL."},
+  {"excerpt": "**Licence vs advertiser:**", "why": "Marked blocked (a legal question)."}
+ ]
+}

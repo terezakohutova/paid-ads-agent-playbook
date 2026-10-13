@@ -1,0 +1,34 @@
+{
+ "date": "2026-10-13",
+ "model": "Claude Sonnet, via the Claude Code Agent tool with model \"sonnet\" (the exact model version is not reported back to the caller)",
+ "subagent_type": "general-purpose (fresh context, no conversation history)",
+ "prompt": "Read the agent definition at <run-dir>/google-ads.md and act as that agent.\n\nTask from the account owner: \"Audit the Google Ads account. The exports are in <run-dir>/data/\"\n\nUse only the files inside <run-dir>/. Do not open any other file or folder and do not use the web. When you are done, write your complete audit to <run-dir>/output.md and return the same text as your final answer.",
+ "inputs": {
+  "agent_file": {
+   "name": "google-ads.md",
+   "sha256": "cee05ae6d3cf2c3a3e8f2b1cf4836b2fc4ff920dcee59b52619b1ee4b4b19ce7",
+   "identical_to_repo_version": true
+  },
+  "data_files": {
+   "account-access.csv": "9cb6fa3ff408e6beb68dfa00f97930be68346663a06dc5bfe5414b984aff7893",
+   "account-settings.csv": "dbbd58b5c464deb6cedd53ca70f6a5ce8727732f52ae2af061f19de46cb076f9",
+   "ads.csv": "8bf3e8c97be161f33920673cfc3cbe6c1054b30cf2ef62ccfb984b286cda3403",
+   "attribution-check.csv": "41430f544c1dbafb83e5a7dbd7625807d1b1030b1e67c42b4e726cecc3652455",
+   "campaigns.csv": "b5b0c49cd95d61691012dce24400b917c590b2d7de90dd2cd15ee436d630a256",
+   "change-history.csv": "d7bfb14e8a2177bee612eb8ca2f23879226ba825c7c80738322159fd0e766376",
+   "change-ledger.csv": "795d69ccd903b7f55e94ff022240589e582e9e06fb309ff822931eeaf6e9a2a7",
+   "client-facts.csv": "9fe924cbb324ae3d9766902719d6721c9a0d5b6392bb67fc1f99665ec170d053",
+   "conversion-actions.csv": "cc8b5e8c5651f7a425512280cd4d841ff56cbe0f41a559b4bd957050b629a083",
+   "negative-keyword-lists.csv": "ccf5ab3455c9888cbd23b6eff2616c6825438f5b3dc76ce2edc2f61297a65596",
+   "search-terms.csv": "075f2f2df1e0df4517bcd67cc5a9508cada79b55ce13fc4a7f7f5c91935ef356"
+  }
+ },
+ "not_given": "the playbook, ads-ops/, the answer key, any earlier audit, web access, the client vertical",
+ "output": {
+  "file": "output.md",
+  "sha256": "cb6f76cce57a327589f69a687471dff9630af61e70d1569095575753212c94e5",
+  "note": "written by the subagent itself; copied byte for byte, not edited"
+ },
+ "tool_uses": 7,
+ "duration_seconds": 110
+}

@@ -1,0 +1,10 @@
+account,user,access_level,last_sign_in
+CZ,owner@tallo.example,Admin,2026-10-11
+CZ,marek@tallo.example,Standard,2026-10-10
+CZ,ops@brightlane-media.example,Admin,2025-12-19
+SK,owner@tallo.example,Admin,2026-10-11
+SK,marek@tallo.example,Standard,2026-10-02
+SK,ops@brightlane-media.example,Admin,2025-12-19
+PL,owner@tallo.example,Admin,2026-10-11
+PL,marek@tallo.example,Standard,2026-09-30
+PL,finance@tallo.example,Read only,2026-09-01

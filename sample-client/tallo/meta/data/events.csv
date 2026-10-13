@@ -1,0 +1,7 @@
+dataset,event,source,mapped_to_standard_event,events_7d,event_match_quality
+Tallo app events,fb_mobile_activate_app,Meta SDK,App launch,41200,n/a
+Tallo app events,fb_mobile_install,Meta SDK,App install,1912,n/a
+Tallo app events,install,MMP,App install,1874,n/a
+Tallo app events,registration,MMP,Complete registration,744,n/a
+Tallo app events,first_deposit,MMP,Not mapped (custom event),63,n/a
+Tallo app events,PageView,Pixel (tallo.example),n/a,18300,6.8

@@ -1,0 +1,35 @@
+{
+ "date": "2026-10-13",
+ "model": "Claude Sonnet, via the Claude Code Agent tool with model \"sonnet\" (the exact model version is not reported back to the caller)",
+ "subagent_type": "general-purpose (fresh context, no conversation history)",
+ "prompt": "Read the agent definition at <run-dir>/facebook-ads.md and act as that agent.\n\nTask from the account owner: \"Audit the Meta Ads account. The exports are in <run-dir>/data/\"\n\nUse only the files inside <run-dir>/. Do not open any other file or folder and do not use the web. When you are done, write your complete audit to <run-dir>/output.md and return the same text as your final answer.",
+ "inputs": {
+  "agent_file": {
+   "name": "facebook-ads.md",
+   "sha256": "658403f8b5bbcd4f79dccb0995079af7f2740f946536dddaa344614558021c6b",
+   "identical_to_repo_version": true
+  },
+  "data_files": {
+   "activity-history.csv": "ed16b9e151ae69e9c2ad601e1484d28c35d78dcac8e09dee17a8a20c9ce3bb4a",
+   "ad-sets.csv": "f377cd48a87b7f3e409094a6a1ad026c4bd9978b2d23dd23e5d609c62dada305",
+   "ads.csv": "a330be60ec2b5261629cf1d237b1262615a417fe53da7e5780aaf2576f283d7f",
+   "brand-safety.csv": "9089c1cb34233aec564d59edbae09983217a0dbbe658d6b6c227cf0d86dd3d24",
+   "business-portfolios.csv": "1f9c473e22f5bd59f560783927ba2d21dae68e5d7e06612659164b38d1fe4bbe",
+   "change-ledger.csv": "cdb44d1360f69fd8d96bcd168320f0c2d9fd697113a3037bc4812d8d3c90c30f",
+   "client-facts.csv": "9fe924cbb324ae3d9766902719d6721c9a0d5b6392bb67fc1f99665ec170d053",
+   "events.csv": "4e1018f930053317c8fd25288f16f59e593723fe89ff5f1bde7549ed2852a80d",
+   "partners.csv": "df73bbfced3bdd1685d47cb7cb18c2a5810a95522d7d9dc176f86561dea51cb4",
+   "payment-methods.csv": "ae19975fffcbefe78d2cfe8cd6e1d736c4b566c1f22c3d9435bbf5663c9641b5",
+   "people.csv": "95222e8764bf2aa00fd9144409ab52fd1f5396136e9426d7667b04b3c28b0c22",
+   "system-users.csv": "0a73d368dd04de274c6baeb35c880e027f369c1382377e1b2020ede366668c50"
+  }
+ },
+ "not_given": "the playbook, ads-ops/, the answer key, any earlier audit, web access, the client vertical",
+ "output": {
+  "file": "output.md",
+  "sha256": "ab100afefc340f0952c25f150639e75e047d3e504c3c5fa597cd5a398ab19a5d",
+  "note": "written by the subagent itself; copied byte for byte, not edited"
+ },
+ "tool_uses": 5,
+ "duration_seconds": 104
+}

@@ -1,0 +1,5 @@
+date_time,ad_account,changed_by,object,change
+2026-09-18 11:20,Tallo CZ,owner@tallo.example,CZ_acq_core_2507_android,Daily budget EUR 75.00 -> EUR 90.00
+2026-09-24 09:02,Tallo SK,marek@tallo.example,SK_acq_test_2509,Created 6 ad sets
+2026-10-01 18:45,Tallo PL,marek@tallo.example,PL_acq_promo_2509_android,Daily budget EUR 40.00 -> EUR 100.00
+2026-10-03 08:15,Tallo CZ,marek@tallo.example,CZ_acq_winter_2510_android,Created ad set

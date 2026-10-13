@@ -1,0 +1,28 @@
+{
+ "key": "google",
+ "scored_by": "the repo author, by hand, after the run; every excerpt is a verbatim quote from output.md (a test checks this)",
+ "unit": "one FAIL finding: a distinct problem the run marked FAIL, wherever it sits in the output",
+ "findings": [
+  {"excerpt": "First Deposit is **Secondary in every market**", "label": "G1"},
+  {"excerpt": "In PL it **does not exist** as an action at all", "label": "G2"},
+  {"excerpt": "PL has two Primary download actions, Install (MMP) 49 and first_open (Firebase) 655", "label": "G3"},
+  {"excerpt": "CZ 97%, SK 96%, **PL 0%**", "label": "G4"},
+  {"excerpt": "Not attached to `CZ_SEARCH_acq_generic_2311`", "label": "G5"},
+  {"excerpt": "Three of them have zero conversions and spent EUR 512", "label": "G6"},
+  {"excerpt": "`CZ_PMAX_acq_web_2509` brand exclusions = none", "label": "G7"},
+  {"excerpt": "PL has auto-apply ON for \"Bidding and budgets\" and \"Keywords and targeting\"", "label": "G8"},
+  {"excerpt": "2026-10-02 16:30 SK `SK_APP_acq_promo_2508` budget EUR 35 to 70 (+100%) by marek@tallo.example (Standard user). No ledger row", "label": "G9"},
+  {"excerpt": "still has **Admin** on **CZ and SK**", "label": "G10"},
+  {"excerpt": "These are false fee claims on a live, enabled campaign", "label": "G11"},
+  {"excerpt": "A guaranteed return on a market-linked product is a restricted/misleading claim", "label": "G12"},
+  {"excerpt": "**Copied to PL 1:1** (guardrail 9)", "label": "G13"},
+  {"excerpt": "**Mechanic copied** (guardrail 10)", "label": "G14"},
+  {"excerpt": "| PL | 655 | **44** | **about 15x** |", "label": "G15"},
+  {"excerpt": "Polish tokens in `PL_APP_acq_dowod_spoleczny_2509`", "label": "G16"},
+  {"excerpt": "**Ledger rollback trigger on the one recorded change: FAIL / needs owner decision (medium).**", "label": "extra-valid", "note": "Not planted: the CZ ledger row was meant as a clean control, but 4,390 EUR / 38 First Deposits is at least EUR 115 against a EUR 95 trigger, so 'kept' is doubtful. A real flaw in the sample data, found by the run."}
+ ],
+ "not_counted": [
+  {"excerpt": "`PL_APP_acq_dowod_spoleczny_2509` shows 451 conversions that map to no listed action", "why": "Marked blocked, not FAIL. It is a real inconsistency in the sample data (an authoring slip), correctly not scored as a finding."},
+  {"excerpt": "**Currency / time zone: blocked (medium).**", "why": "Blocked, not FAIL; a fair question."}
+ ]
+}

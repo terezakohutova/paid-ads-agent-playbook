@@ -1,0 +1,27 @@
+{
+ "key": "google",
+ "scored_by": "the repo author, by hand, after the run; every excerpt is a verbatim quote from output.md (a test checks this)",
+ "unit": "one FAIL finding: a distinct problem the run marked FAIL, wherever it sits in the output",
+ "findings": [
+  {"excerpt": "The value event **First Deposit (MMP)** is **Secondary** in CZ (38 conv/30d) and SK (9 conv/30d)", "label": "G1"},
+  {"excerpt": "**missing in PL** (no action in the export)", "label": "G2"},
+  {"excerpt": "PL has two Primary Download actions for the same event", "label": "G3"},
+  {"excerpt": "ad_user_data / ad_personalization present on **0%** of app conversions", "label": "G4"},
+  {"excerpt": "CZ_SEARCH_acq_generic_2311 and CZ_PMAX_acq_web_2509 have no list attached", "label": "G5"},
+  {"excerpt": "**EUR 512 in 30d, about 29% of the campaign's EUR 1,786**", "label": "G6"},
+  {"excerpt": "CZ_PMAX_acq_web_2509: brand exclusions = \"none\"", "label": "G7"},
+  {"excerpt": "PL: auto-apply **On** for \"Bidding and budgets\" and \"Keywords and targeting\"", "label": "G8"},
+  {"excerpt": "**SK budget EUR 35 to 70/day (+100%) by marek@tallo.example on 2026-10-02**", "label": "G9"},
+  {"excerpt": "ops@brightlane-media.example has **Admin** on CZ and SK", "label": "G10"},
+  {"excerpt": "The ad promises free forever and no fees, so it is outdated and misleading", "label": "G11"},
+  {"excerpt": "a guaranteed return on an ETF investment product is a restricted and false claim", "label": "G12"},
+  {"excerpt": "It was also copied 1:1 into a second market (guardrail 9)", "label": "G13"},
+  {"excerpt": "a mechanic copied SK to PL (guardrail 10)", "label": "G14"},
+  {"excerpt": "| PL | 655 | 44 | **about 15x** |", "label": "G15"},
+  {"excerpt": "use a Polish token; the convention requires English", "label": "G16"}
+ ],
+ "not_counted": [
+  {"excerpt": "Question for the owner: was \"kept\" based on evidence?", "why": "The CZ ledger row (meant as a clean control) is questioned, but marked blocked, not FAIL. The question is fair: see the answer key's note on this row."},
+  {"excerpt": "Currency EUR in CZ and PL (CZK/PLN markets)", "why": "Raised as a question, not a FAIL; a fair one."}
+ ]
+}

@@ -1,0 +1,17 @@
+account,setting,value
+CZ,currency / time zone,EUR / Europe/Prague
+SK,currency / time zone,EUR / Europe/Prague
+PL,currency / time zone,EUR / Europe/Warsaw
+CZ,auto-apply recommendations,Off
+SK,auto-apply recommendations,Off
+PL,auto-apply recommendations,"On: Bidding and budgets; Keywords and targeting"
+CZ,enhanced conversions for web,On (status: Recording)
+CZ,EEA consent signals in app conversions (ad_user_data / ad_personalization),Present on 97% of conversions
+SK,EEA consent signals in app conversions (ad_user_data / ad_personalization),Present on 96% of conversions
+PL,EEA consent signals in app conversions (ad_user_data / ad_personalization),Present on 0% of conversions
+CZ,linked accounts,"Google Analytics 4: linked; MMP: linked"
+SK,linked accounts,"Google Analytics 4: linked; MMP: linked"
+PL,linked accounts,"Google Analytics 4: linked; MMP: linked"
+CZ,account notifications email,ads-alerts@tallo.example
+SK,account notifications email,ads-alerts@tallo.example
+PL,account notifications email,ads-alerts@tallo.example
