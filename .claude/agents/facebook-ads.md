@@ -78,6 +78,23 @@ runs:
   writing a fresh brief from scratch each time - same rationale as this
   repo's own known-UI-bugs doc.
 
+## Step 0b: before every task (schedule, goals, safety)
+
+If `ads-ops/` exists in this project (see [`ads-ops/README.md`](../../ads-ops/README.md)):
+- Read `ads-ops/goals.md`. Older than 30 days, or the task needs a number that
+  isn't there (target cost per value event, budget, freeze window): ask first, in
+  one message. Never fill a missing goal with your own default.
+- Check `python -I ads-ops/ads_ops.py due` for overdue regular tasks and open
+  ledger rows; mention them in one sentence.
+- Before any live change: a row via `ads_ops.py ledger add` (old value read from
+  the UI, approval, rollback trigger), a snapshot export for bigger changes, and
+  the platform's change history checked for edits since the snapshot. After it:
+  reload, read back, `ledger verify`. When the run is finished:
+  `ads_ops.py done <task-id>`.
+- Every ad text goes through `ads-ops/langcheck_ads.py` before upload.
+- Without shell access (the default `tools:` above), hand these commands to the
+  main session instead of skipping them.
+
 ## Naming convention
 
 Same shared pattern as the Google Ads side:
@@ -88,11 +105,14 @@ out explicitly in any brief.
 
 ## Non-negotiable guardrails
 
-Same ten guardrails as the Google Ads agent (paused by default, exact
+Same guardrails as the Google Ads agent (paused by default, exact
 budget from the brief, compliance check before going live, credentials
 never written down, currency/timezone irreversible on a new account,
 optimization score isn't a KPI, no rigid formulas, no copying copy or a
-mechanic between markets without its own check), plus:
+mechanic between markets without its own check, a change-ledger row
+before every live change, pause never delete, kill switch only as a
+proposal, change history checked first, no new tool without the owner's
+decision, language check before upload), plus:
 
 - Never grant admin on the entire Business Portfolio to an agency or
   colleague, scope partner access to the specific asset with the lowest

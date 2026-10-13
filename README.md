@@ -41,6 +41,28 @@ has been stripped or replaced with a placeholder.
    by accident, copying banned copy between markets, over-scoped
    permissions). Delete whatever doesn't apply to your setup.
 
+## Running it on a schedule, safely
+
+[`ads-ops/`](./ads-ops/README.md) turns the two agents into something that runs
+regularly without drifting or breaking things:
+
+- `cadence.json` + a `SessionStart` hook: weekly checks, monthly audits of each
+  account and of measurement, a monthly research scan, a quarterly access audit.
+  The session lists what is overdue and offers it, nothing live runs on its own.
+- `goals.md`: goals, budget ceilings and the optimisation target, confirmed by the
+  owner and treated as stale after 30 days, so the agents ask instead of guessing.
+- `ads_ops.py ledger`: every live change is written down first with the old
+  value, the approval and a rollback trigger, and `ledger rollback <id>` prints
+  the way back.
+- A `PreToolUse` hook keeps a version of every agent, skill and goals file before
+  each edit, restorable with `ads_ops.py restore`.
+- `langcheck_ads.py`: Hunspell + LanguageTool (+ Korektor for Czech) as a gate
+  before any ad copy is uploaded.
+- `watchlist.md` and the `ads-research-scan` skill
+  ([`.claude/skills/ads-research-scan/`](./.claude/skills/ads-research-scan/SKILL.md)):
+  official MCPs, optimisation and language repos, changelogs, trends and
+  competitors, logged as hypotheses in `learnings.md`, never installed on the spot.
+
 ## License
 
 MIT, see [LICENSE](./LICENSE).

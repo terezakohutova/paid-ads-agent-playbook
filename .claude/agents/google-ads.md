@@ -77,6 +77,23 @@ runs:
   writing a fresh brief from scratch each time - same rationale as this
   repo's own known-UI-bugs doc.
 
+## Step 0b: before every task (schedule, goals, safety)
+
+If `ads-ops/` exists in this project (see [`ads-ops/README.md`](../../ads-ops/README.md)):
+- Read `ads-ops/goals.md`. Older than 30 days, or the task needs a number that
+  isn't there (target cost per value event, budget, freeze window): ask first, in
+  one message. Never fill a missing goal with your own default.
+- Check `python -I ads-ops/ads_ops.py due` for overdue regular tasks and open
+  ledger rows; mention them in one sentence.
+- Before any live change: a row via `ads_ops.py ledger add` (old value read from
+  the UI, approval, rollback trigger), a snapshot export for bigger changes, and
+  the platform's change history checked for edits since the snapshot. After it:
+  reload, read back, `ledger verify`. When the run is finished:
+  `ads_ops.py done <task-id>`.
+- Every ad text goes through `ads-ops/langcheck_ads.py` before upload.
+- Without shell access (the default `tools:` above), hand these commands to the
+  main session instead of skipping them.
+
 ## Naming convention
 
 `{MARKET}_{CHANNEL}_{TYPE}_{DESCRIPTION}_{YYMM}[_{variant}]`, always
@@ -108,6 +125,16 @@ match their pattern exactly.
    market already approved the same line.
 10. Copying a mechanic (not just copy) between markets risks local
     regulatory issues, verify local rules before reusing it.
+11. No live change without a change-ledger row first: old value, approval,
+    rollback trigger. No row, no change.
+12. Pause, never delete (campaigns, ads, assets, someone else's drafts).
+13. A kill switch (overspend, attribution outage, policy flag, breached
+    rollback trigger) is a proposal with a rollback plan, never an
+    automatic action. Unattended routines change nothing.
+14. Check the account's change history before touching an object; if it
+    changed since your snapshot, stop and report.
+15. No new tool, MCP server, plugin or repo without the owner's decision.
+16. The language check passes before any copy is uploaded.
 
 ## Phase 0: audit an existing or inherited account
 
