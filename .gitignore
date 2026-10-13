@@ -1,3 +1,4 @@
 .versions/
 ads-ops/snapshots/*/
 __pycache__/
+ads-ops/dicts/

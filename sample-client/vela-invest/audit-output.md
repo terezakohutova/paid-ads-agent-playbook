@@ -5,14 +5,15 @@ Run against [`data/`](data/) using the Phase 0 checklist from
 finding is marked FAIL, pass, or blocked, per that checklist's own
 confidence convention, and cites the specific rule that catches it.
 
-This output was independently reproduced by handing a fresh Claude Code
-agent only the `google-ads.md` instructions and the `data/` folder, no
-sight of this file. Two things changed as a result of that check: two
-checklist items that used to appear here (brand safety/PMax, access and
-roles) were removed because they are not part of the condensed checklist
-in `google-ads.md`, and the search-terms-report finding was corrected to
-"blocked" because no such file exists in `data/`. Everything else below
-matched the independent run.
+**How it was checked.** A fresh Claude subagent was given only
+`google-ads.md` and the CSVs in `data/`, with no sight of this file, and
+its output is kept unedited in
+[`blind-run-2026-10-13.md`](blind-run-2026-10-13.md), together with a
+point-by-point reconciliation. It found all seven planted issues. It also
+caught a real error in an earlier version of this file (see conversion
+actions below), and that error is fixed here. The two places where this
+file still disagrees with the blind run are explained in the
+reconciliation.
 
 ## Findings
 
@@ -22,13 +23,14 @@ FAIL, high confidence on the primary/secondary read; category and
 attribution model are blocked, `conversion-actions.csv` has no such
 columns. The actual value event, `First Deposit (Activation)`, sits as
 Secondary in CZ/SK and does not exist as a conversion action in PL at
-all. Per the playbook's event-priority rule, a value event on Secondary
-is a fail, not a detail, this account is currently optimizing on upstream
-proxies (Registration, Account Link), the exact mistake the playbook
-describes as already having been made and corrected once. Secondary risk
-worth flagging: `App Install`'s count setting is `Every` rather than
-`One`, unusual for an install-type action and worth verifying it is not
-inflating install counts.
+all. `App Install` is the only Primary action, so bidding optimizes on
+installs, the most upstream proxy in the funnel. Registration and Account
+Link sitting on Secondary is correct; the value event sitting there is
+the fail. Per the playbook's event-priority rule (optimize on the
+downstream value event, Primary only for the optimization target) this is
+not a detail. Worth verifying too: `App Install`'s count setting is
+`Every` rather than `One`, unusual for an install action and a likely
+source of inflated install counts.
 
 **No duplicate counting of the same conversion**
 Blocked. The export has one row per action with no cross-tool tagging
@@ -39,7 +41,9 @@ here.
 **Shared negative keyword lists exist and are attached**
 FAIL, confirmed. "Vela - Master Negatives" exists but is attached to one
 of six campaigns. The account's other Search campaign,
-`CZ_SEARCH_acq_generic_2409`, has no negative list attached at all.
+`CZ_SEARCH_acq_generic_2409`, has no negative list attached at all
+(Phase 0 checklist: lists must be attached to every campaign, not just
+one).
 
 **Search terms report**
 Blocked. No search-terms-report file exists in `data/`. Not answerable
@@ -49,7 +53,9 @@ from what was provided, needs a real export before this item can close.
 FAIL, medium confidence. `CZ_SEARCH_acq_generic_2409` is noted "created
 2024-09; not touched since," roughly sixteen months dormant, exactly the
 case this rule exists for. No copy text for this campaign is in the
-export and nothing indicates it has ever had an independent copy review.
+export and nothing indicates it has ever had an independent copy review
+(Phase 0 rule: copy on old campaigns is checked separately from
+structure).
 
 **Compliance check**
 FAIL, confirmed, two campaigns. `SK_APP_acq_giveaway_2512` uses "guaranteed
@@ -57,19 +63,23 @@ FAIL, confirmed, two campaigns. `SK_APP_acq_giveaway_2512` uses "guaranteed
 `PL_APP_acq_giveaway_2601` copied that same line into Polish, live and
 spending. Guardrail 9 exists for exactly this pattern: the PL duplicate
 is not a lesser problem than the SK original, it is a second, independent
-live violation.
+live violation. Guardrail 10 applies on top: the giveaway mechanic itself
+was copied from SK to PL, and nobody has checked Polish rules on prize
+promotions.
 
 **English asset names**
 FAIL, confirmed, two breaks on one campaign. `PL_APP_acq_ABtest_dowod_spoleczny_2601`
 uses "dowod_spoleczny" (Polish for "social proof") in the campaign name
 itself, where the naming convention already established by its sibling
 campaign (`CZ_APP_acq_ABtest_social_proof_2601`) is English, and its own
-notes confirm one asset headline is also named in Polish.
+notes confirm one asset headline is also named in Polish. Guardrail 4 and
+the naming convention both require English asset names in every market.
 
 **Change history reviewed**
 FAIL. The only change-history entry in the export is the PL giveaway
 budget increase from EUR 40/day to EUR 90/day on 2026-01-14, with no
-approver on record and no rollback trigger anywhere. No change-history
+approver on record and no rollback trigger anywhere (guardrail 11: no
+live change without an approval and a rollback trigger). No change-history
 rows exist for the other five campaigns either, that is unscored, not a
 clean pass, genuinely unknown whether no changes occurred or the export
 is incomplete.
@@ -79,7 +89,7 @@ FAIL, confirmed for PL; CZ and SK are blocked, not present in
 `attribution-check.csv`. The platform reports 61 PL installs over the
 last 7 days against 4 from Vela's own attribution tool, a roughly 15x
 gap, squarely in the range the checklist treats as a sharing gap rather
-than real performance. Per the misattribution note, check first whether
+than real performance (Phase 0 attribution rule). Check first whether
 the tracking link was ever shared into the PL sub-account, created
 January 2026, before trusting any PL read.
 
@@ -94,11 +104,11 @@ January 2026, before trusting any PL read.
    confirm CZ/SK links too since no data was provided to check them.
 3. Build `First Deposit (Activation)` as a real, promoted conversion
    action in every market, including PL where it does not exist yet.
-   Every campaign is currently optimizing on upstream proxies, not actual
-   value.
+   Every campaign currently optimizes on installs, not on value.
 4. Get retroactive sign-off on, or reverse, the unapproved PL budget
    increase. No approver, no rollback trigger on record, and it is the
-   same campaign carrying the compliance violation above.
+   same campaign carrying the compliance violation above. Check Polish
+   promotion rules before the giveaway runs again in any form.
 5. Attach the master negative list to `CZ_SEARCH_acq_generic_2409`.
 6. Fix the naming break on `PL_APP_acq_ABtest_dowod_spoleczny_2601`, both
    the campaign name and one asset name. Low severity, cheap to fix.

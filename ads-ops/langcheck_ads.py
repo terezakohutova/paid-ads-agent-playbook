@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
 """Native-language check of ad copy before upload.
 
-Read-only, it never changes the copy. Exit 1 when something is found, so it can
-gate an upload the same way creative QA does.
+Read-only, it never changes the copy. Exit codes, so it can gate an upload the
+same way creative QA does:
+    0  every text checked by at least one tool, nothing found
+    1  findings (do not upload)
+    2  usage error (no texts, no language)
+    3  nothing was actually checked (no dictionary, no LanguageTool server, Korektor
+       off or unreachable). Fails closed: "no tool ran" is never reported as clean.
+       --allow-unchecked turns this into exit 0 for a deliberate dry run.
 
     python -I ads-ops/langcheck_ads.py copy.json            # {"market": "pl", "copy": ["...", "..."]}
     python -I ads-ops/langcheck_ads.py spec.json            # any JSON with a "market"/"lang" key: headline, cta, primary_text, ... are collected
     python -I ads-ops/langcheck_ads.py --lang de "Text 1" "Text 2"
     add --no-online to skip Korektor (the only tool that sends text out)
+    add --allow-unchecked to exit 0 even when no checker is available (dry run only)
 
 Tools (each one is optional, a missing one is reported, not fatal):
   - Hunspell via spylls (pip install spylls) + LibreOffice dictionaries
@@ -133,12 +140,19 @@ def main(argv):
         sys.stdout.reconfigure(encoding='utf-8')
     except Exception:
         pass
+    if argv and argv[0] in ('-h', '--help'):
+        print(__doc__)
+        return 0
     online = '--no-online' not in argv
-    argv = [a for a in argv if a != '--no-online']
+    allow_unchecked = '--allow-unchecked' in argv
+    argv = [a for a in argv if a not in ('--no-online', '--allow-unchecked')]
     if not argv:
         print(__doc__)
         return 2
     if argv[0] == '--lang':
+        if len(argv) < 2:
+            print('usage: --lang <code> "text" ...')
+            return 2
         lang, texts = MARKET_LANG.get(argv[1].lower(), argv[1].lower()), argv[2:]
     else:
         lang, texts = collect(argv[0])
@@ -146,12 +160,17 @@ def main(argv):
         print('no market/lang in the file; pass --lang')
         return 2
     texts = [t for t in dict.fromkeys(texts) if t.strip()]
+    if not texts:
+        print(f'no ad texts found (looked for keys: {", ".join(TEXT_KEYS)})')
+        return 2
     problems = 0
+    ran = []                                  # tools that actually checked the texts
 
     unk = unknown_words(texts, lang)
     if unk is None:
         print(f'[hunspell] skipped: no spylls or no {HUNSPELL.get(lang, lang)} dictionary in {DICTS}')
     else:
+        ran.append('hunspell')
         for w, ctx in unk.items():
             problems += 1
             print(f'[hunspell] unknown "{w}"  in: {ctx}')
@@ -159,8 +178,11 @@ def main(argv):
     ltl = LT_LANG.get(lang)
     if ltl:
         try:
-            for t in texts:
-                for x in lt_check(t, ltl):
+            for i, t in enumerate(texts):
+                matches = lt_check(t, ltl)
+                if i == 0:
+                    ran.append('languagetool')
+                for x in matches:
                     bad = t[x['offset']:x['offset'] + x['length']]
                     if ignored(bad):
                         continue
@@ -171,9 +193,12 @@ def main(argv):
             print(f'[languagetool] not reachable at {LT_URL} ({e.__class__.__name__}), grammar NOT checked')
 
     if lang == 'cs' and online:
-        for t in texts:
+        for i, t in enumerate(texts):
             try:
-                for a, b in korektor(t):
+                fixes = korektor(t)
+                if i == 0:
+                    ran.append('korektor')
+                for a, b in fixes:
                     if ignored(a.strip('.,!?:;"()')):
                         continue
                     problems += 1
@@ -182,7 +207,12 @@ def main(argv):
                 print(f'[korektor] not reachable ({e.__class__.__name__}), Czech checked by dictionary only')
                 break
 
-    print(f'{len(texts)} texts checked in {lang}: ' + ('clean' if not problems else f'{problems} findings'))
+    if not ran:
+        print(f'{len(texts)} texts in {lang}: NOT CHECKED, no spelling or grammar tool was available '
+              '(see the setup in the docstring).' + (' Allowed by --allow-unchecked.' if allow_unchecked else ' Do not upload.'))
+        return 0 if allow_unchecked else 3
+    print(f'{len(texts)} texts checked in {lang} with {" + ".join(ran)}: '
+          + ('clean' if not problems else f'{problems} findings'))
     print('Tools do not judge tone, claims or brand rules: read every text yourself too.')
     return 1 if problems else 0
 

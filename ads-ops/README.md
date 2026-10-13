@@ -49,7 +49,7 @@ The agents in `.claude/agents/` know *how* to audit, build and optimise. This fo
 - **Learnings:** rows are never deleted, only re-statused (`rejected <date> why`).
 
 ## 5. Language
-Every ad text in every market goes through `python -I ads-ops/langcheck_ads.py copy.json` (or `--lang de "text" ...`): Hunspell via `spylls` + LibreOffice dictionaries (local), LanguageTool (local server), and for Czech optionally Korektor (UFAL). Tools do not judge tone, claims or brand rules: the agent still reads every text against the tone-of-voice doc.
+Every ad text in every market goes through `python -I ads-ops/langcheck_ads.py copy.json` (or `--lang de "text" ...`): Hunspell via `spylls` + LibreOffice dictionaries (local), LanguageTool (local server), and for Czech optionally Korektor (UFAL, the only tool that sends text out; `--no-online` turns it off). Exit codes: 0 clean, 1 findings, 2 usage, **3 nothing was checked** (no dictionary, no server). The gate fails closed: a machine without the tools never reports copy as clean; `--allow-unchecked` exists only for a deliberate dry run. Tools do not judge tone, claims or brand rules: the agent still reads every text against the tone-of-voice doc.
 
 ## Setup
 1. Copy `ads-ops/` into your project root (next to `.claude/`).
@@ -57,3 +57,7 @@ Every ad text in every market goes through `python -I ads-ops/langcheck_ads.py c
 3. Fill in `goals.md` and the competitor table in `watchlist.md`, or let the first `goals-checkin` ask for them.
 4. Optional, for the language check: `pip install spylls`, download the `.aff`/`.dic` files you need from `LibreOffice/dictionaries` into a folder and point `LANGTOOLS_DICTS` at it; run a LanguageTool server (`LT_URL`, default `http://localhost:8081/v2/check`).
 5. Add `.versions/` and `ads-ops/snapshots/*/` to `.gitignore` if the project is a public repo: account exports do not belong on GitHub.
+6. The commands use `python`; where your system calls it `python3` (macOS, most Linux), change the two hook commands too. Python 3.9+, standard library only.
+
+## Tests
+`python -m unittest discover -s tests` from the repo root. The tests run both scripts as subprocesses against a throwaway copy of this folder (cadence, every ledger path including refusals, version collisions within one second, restore, the hook on bad input) and the language gate against a local stand-in for the LanguageTool API, so they need no network and no dictionaries.

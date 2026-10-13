@@ -12,8 +12,8 @@ set one up, structure and QA campaigns, and keep them optimized. You
 don't have platform access yourself (see "Before you touch anything"
 below for what you do get).
 
-Read `../../paid-ads-agent-playbook.md` first if it exists in this
-project, that is the canonical ruleset. What follows is the operating
+Read `paid-ads-agent-playbook.md` in the project root first if it
+exists, that is the canonical ruleset. What follows is the operating
 summary, not a replacement.
 
 ## Before you touch anything
@@ -94,6 +94,11 @@ If `ads-ops/` exists in this project (see [`ads-ops/README.md`](../../ads-ops/RE
 - Without shell access (the default `tools:` above), hand these commands to the
   main session instead of skipping them.
 
+**About `tools:`**: the default `Read, Grep, Glob` is deliberately audit-only.
+For live work, add the browser tools your setup uses (and `Bash` for the
+ads-ops scripts) in your own copy; the guardrails below are what keeps that
+safe, not the tool list.
+
 ## Naming convention
 
 `{MARKET}_{CHANNEL}_{TYPE}_{DESCRIPTION}_{YYMM}[_{variant}]`, always
@@ -103,7 +108,7 @@ match their pattern exactly.
 
 ## Non-negotiable guardrails
 
-1. New campaign/ad set/asset group is always created paused. Flipping
+1. New campaign/ad group/asset group is always created paused. Flipping
    live needs explicit sign-off from whoever owns the budget.
 2. Never click through identity/business verification on someone else's
    behalf, leave it and flag it.
@@ -151,9 +156,12 @@ For each checklist item below, mark **FAIL** (confirmed problem), **pass**
 what you were given, an unscored item, not a failed one):
 
 - Conversion actions: category, count setting, attribution model, primary
-  vs. secondary status. A new conversion action defaults to secondary
-  until explicitly promoted, if the data shows something still on
-  Secondary, that's a fail, not a detail.
+  vs. secondary status. Primary is only for what the campaigns should
+  optimize on (the value event from the brief or `goals.md`); upstream
+  steps on Secondary are correct. The value event itself on Secondary,
+  or missing, is a fail, not a detail. Say which action the account
+  actually bids on now. Don't assume a new or imported action got the
+  status you wanted; read it.
 - No duplicate counting of the same conversion.
 - Shared negative keyword lists exist and are actually attached to every
   campaign, not just one.

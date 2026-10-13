@@ -1,7 +1,7 @@
 # Paid Ads Agent Playbook (Google Ads + Meta Ads)
 
 A pair of reusable Claude Code subagent definitions for running Google Ads and Meta
-(Facebook/Instagram) Ads accounts across multiple markets/legal entities — audit,
+(Facebook/Instagram) Ads accounts across multiple markets/legal entities, audit,
 account setup, campaign structure, creative specs, QA, launch, and ongoing
 optimization. Written to replace "click around and learn as you go" with a fixed,
 repeatable process, because in practice the same mistakes (wrong budget pasted in,
@@ -9,18 +9,14 @@ wrong naming, a bad line item copy-pasted between markets) kept recurring until 
 were written down explicitly.
 
 **This is a generic template.** It was extracted from a real production setup and
-anonymized — every company name, account ID, internal link, and person's name has
+anonymized, every company name, account ID, internal link, and person's name has
 been stripped or replaced with a placeholder. Replace the bracketed placeholders
 with your own facts before using it, and drop the two agent definitions into
 `.claude/agents/google-ads.md` and `.claude/agents/facebook-ads.md` in your own
 project.
 
-_Last updated 2026-10-09: added Step 0 (starter pack), a measurement phase (what the
-agent sets up vs. requests), in-house creative production, learning hygiene, and a
-learning loop for picking up outside tips safely._
-_Updated 2026-10-13: added "Running it regularly and safely" (cadence, goals check-in,
-change ledger with rollback, automatic file versions, language gate, weekly radar),
-with the working files in [`ads-ops/`](ads-ops/README.md)._
+_Platform facts reviewed 2026-10. Ad platforms change specs and names often: anything
+marked "check" below points at the official page to confirm before you build._
 
 ---
 
@@ -30,8 +26,8 @@ with the working files in [`ads-ops/`](ads-ops/README.md)._
    with your own.
 2. Replace the linked "source of truth" bullets with wherever *you* keep campaign
    plans, tone-of-voice docs, and naming conventions (Notion, Confluence, a repo
-   folder — anything works, the agent just needs to be told where).
-3. Keep the guardrails and phase checklists — they encode mistakes that are easy to
+   folder, anything works, the agent just needs to be told where).
+3. Keep the guardrails and phase checklists, they encode mistakes that are easy to
    repeat regardless of company (placeholder budgets, live-launching by accident,
    copying banned copy between markets, over-scoped permissions).
 4. Delete whatever doesn't apply (e.g. if you only run one market, drop the
@@ -47,25 +43,25 @@ with the working files in [`ads-ops/`](ads-ops/README.md)._
 ## Shared conventions across both platforms
 
 - **One legal entity = one ad account = one payment profile, per market.** Never
-  share a payment method/profile across entities — even if a platform's MCC/Business
+  share a payment method/profile across entities, even if a platform's MCC/Business
   Portfolio structure makes it technically possible, mixing billing across entities
   creates a real accounting/tax problem (who actually paid). A parent structure
   (Google MCC, Meta Business Portfolio) should control **access**, not **billing**.
-- **Naming convention** — keep one shared pattern across Google Ads, Meta Ads, and
+- **Naming convention**: keep one shared pattern across Google Ads, Meta Ads, and
   any offline channels, so a campaign name is self-describing regardless of platform:
   `{MARKET}_{CHANNEL}_{TYPE}_{DESCRIPTION}_{YYMM}[_{PLATFORM}][_{variant}]`
   - `MARKET` = your market/country code(s)
-  - `CHANNEL` = campaign type (e.g. `SEARCH`, `APP`) — Google-specific slot, omit for Meta
+  - `CHANNEL` = campaign type (e.g. `SEARCH`, `APP`), Google-specific slot, omit for Meta
   - `TYPE` = `acq` (acquisition) / `brand` / etc.
   - `DESCRIPTION` = free-text English description of the theme (e.g. `giveaway`,
-    `ABtest_social_proof`) — **always English asset names, even for non-English
+    `ABtest_social_proof`), **always English asset names, even for non-English
     markets** (a delegated sub-task once used a local-language word instead of the
-    required English term, because nobody wrote the rule down explicitly — state it
+    required English term, because nobody wrote the rule down explicitly, state it
     in every brief you hand off, don't assume it's inferred)
-  - `YYMM` = **year+month, not day+month** — an easy transposition mistake, verify
+  - `YYMM` = **year+month, not day+month**: an easy transposition mistake, verify
     against the actual campaign creation date
   - `PLATFORM` (Meta) = which app store the ad set targets (Google Play vs. Apple App
-    Store, i.e. Android vs. iOS) — **not** the traffic source; easy to misread
+    Store, i.e. Android vs. iOS), **not** the traffic source; easy to misread
   - optional trailing `variant`
   - Before inventing a new token, check sibling campaigns in the same account and
     match their pattern exactly.
@@ -129,24 +125,24 @@ with the working files in [`ads-ops/`](ads-ops/README.md)._
     The agent looks at every image, then shows a contact sheet to the owner. Upload
     only through the normal flow (paused, approval).
 
-- **Event/optimization priority** — define your funnel once and update it as your
+- **Event/optimization priority**: define your funnel once and update it as your
   data quality improves, e.g.: `Install → Registration → Account Link → Activation
   (the value-generating event)`. In practice this evolved through several wrong
   proxies before landing on the real one:
   1. An early proxy metric (e.g. "connection rate") was rejected as not
      representative of downstream value.
-  2. Replaced by a registration→reward trend — better, but still upstream of actual
+  2. Replaced by a registration→reward trend, better, but still upstream of actual
      value.
   3. **Standing rule: optimize on the actual downstream value event from your
      attribution tool** (e.g. account activation, purchase, subscription) as the
      *only* decision input for scaling/pausing/reallocating budget. Platform metrics
-     (CPI/CTR/registration rate) stay diagnostic, not decision-making — a campaign
+     (CPI/CTR/registration rate) stay diagnostic, not decision-making, a campaign
      can look weak on an upstream metric and simultaneously be the most efficient on
      the metric that actually matters, which is exactly why the switch happened.
-  - Watch for gaps in the data before concluding anything: new conversion actions in
-    most attribution tools default to "secondary"/excluded from account-level goals
-    until explicitly promoted — don't treat them as the primary signal until they
-    are. Cross-check attribution-tool spend/conversion numbers against the ad
+  - Watch for gaps in the data before concluding anything: a new or imported
+    conversion action does not always land with the Primary/Secondary status (Google)
+    or the event mapping (Meta) you intended, so read the status instead of assuming
+    it. Only Primary actions feed bidding. Cross-check attribution-tool spend/conversion numbers against the ad
     platform's own report before trusting either one blindly; cost-import bugs
     between platforms and attribution tools are common enough to check for.
   - **Optimizing on a proxy event is a decision for the budget owner, not a
@@ -157,61 +153,61 @@ with the working files in [`ads-ops/`](ads-ops/README.md)._
 
 - **Non-negotiable guardrails (both platforms)**
   1. **New campaign/ad set/asset group is always created PAUSED.** Flipping to live
-     or raising a budget requires explicit sign-off from whoever owns the budget —
+     or raising a budget requires explicit sign-off from whoever owns the budget,
      get it before sending anything, a live campaign is not easily reversible.
   2. **Identity/business verification modals are never click-through'd** on someone
      else's behalf. Leave the draft unsaved and flag it.
-  3. **Budget is always the exact number from the brief — never a platform
+  3. **Budget is always the exact number from the brief, never a platform
      "recommended" number, never a rounded guess.** This has failed before (a
      placeholder number got used instead of the real one).
   4. **Compliance check before saving anything live**: no restricted claims for your
      vertical (e.g. a fintech app might ban "guaranteed returns", "mortgage/loan"
      language unrelated to the product), no competitor names/trademarks, no
      non-English asset names for non-English markets. State every one of these
-     explicitly in the brief when delegating — don't assume it's inferred.
+     explicitly in the brief when delegating, don't assume it's inferred.
   5. **Credentials are never written down anywhere**, and never log in on someone
-     else's behalf, even if a browser offers autofill — wait for them to log in
+     else's behalf, even if a browser offers autofill, wait for them to log in
      themselves.
-  6. **Currency and timezone on a new (sub-)account are irreversible** — double
+  6. **Currency and timezone on a new (sub-)account are irreversible**: double
      check before saving, especially for a brand-new market entity.
   7. **"Optimization score" / auto-apply recommendations are not KPIs.** Leave
      auto-apply toggles off by default until a specific recommendation is verified
      against your actual strategy.
   8. **No rigid formulas as blanket approval** (e.g. "always split 70/20/10", "always
-     use N× CPA") — every budget decision needs to be backed by that specific
+     use N× CPA"), every budget decision needs to be backed by that specific
      campaign's current marginal evidence (its own downstream conversion rate), not
      a general ratio.
   9. **Copying copy 1:1 from another market carries over its mistakes.** A banned
      claim was once inherited by a third market because it was copy-pasted from a
      second market that already had the same mistake live. Every market gets its
-     own independent compliance check — "the sibling market already approved this"
+     own independent compliance check, "the sibling market already approved this"
      is not a reason to skip it.
   10. **Copying a *mechanic* (not just copy) between markets/regions risks local
       regulatory issues** (e.g. a promotional giveaway that must be skill-based
-      rather than pure chance in one jurisdiction) — verify local rules before
+      rather than pure chance in one jurisdiction), verify local rules before
       reusing a mechanic, not just the wording.
 
 - **Budget rules learned in practice**
-  - Never accept a platform wizard's "recommended budget" — use the number from the
+  - Never accept a platform wizard's "recommended budget", use the number from the
     brief. Wizards have suggested budgets an order of magnitude off the real
     intended spend.
   - Convert currency manually against a known reference number, not by estimation.
     If the brief doesn't state what a new number should be equivalent to, ask.
   - Before any cross-market/cross-campaign reallocation, audit the whole account for
-    undocumented/"shadow" campaigns first — these do turn up mid-analysis and need
+    undocumented/"shadow" campaigns first, these do turn up mid-analysis and need
     separate handling, not to be silently included or excluded.
-  - Promotional/giveaway campaigns are a standing exception — don't touch them
+  - Promotional/giveaway campaigns are a standing exception, don't touch them
     without explicit sign-off, even if they look weak on the current metric. Flag,
     don't act unilaterally.
-  - Before "fixing" a seemingly broken campaign, check the change history — it may
+  - Before "fixing" a seemingly broken campaign, check the change history, it may
     already have been fixed by someone else very recently.
   - A new or long-dormant account will trigger identity verification after the
-    first edit — expect this as normal, not as a broken account.
+    first edit, expect this as normal, not as a broken account.
   - Every budget-change proposal states five things, not just an amount: which
     platform/campaign, the amount, timing, who approves it, **what number counts as
     success**, and **what number triggers rollback/pause**. Without a rollback
     trigger, treat the change as "proposed," not "done."
-  - Don't derive a default budget from history/logs — even numbers cited here as
+  - Don't derive a default budget from history/logs, even numbers cited here as
     real examples are snapshots from a past session, not standing values. Budget is
     re-confirmed fresh, every session, even if the same number would "logically"
     still apply.
@@ -225,7 +221,7 @@ with the working files in [`ads-ops/`](ads-ops/README.md)._
   market/entity, each with its own payment profile tied to that entity's real
   registration details.
 - Wherever you keep account audit notes, attribution/tracking audit notes, and
-  keyword/brand research — link them here.
+  keyword/brand research, link them here.
 - Copy/brand sources to read **before** writing any copy, not as an afterthought:
   tone-of-voice doc, glossary, brand guidelines. Reuse previously-approved copy
   variants instead of rewriting from scratch when one already exists.
@@ -234,7 +230,7 @@ with the working files in [`ads-ops/`](ads-ops/README.md)._
 - Attribution misattribution note (if relevant to you): app installs can get
   misattributed to "Organic" instead of the real paid channel if the attribution
   tool's link isn't explicitly shared into every sub-account under a manager
-  account — check this sharing before trusting any "0 installs" reading.
+  account, check this sharing before trusting any "0 installs" reading.
 - Open items to track per market: identity verification deadlines, campaigns with
   near-zero delivery, whether new conversion actions should be promoted from
   secondary to primary.
@@ -243,7 +239,7 @@ with the working files in [`ads-ops/`](ads-ops/README.md)._
 See shared convention above; Google Ads adds a `{CHANNEL}` slot for campaign type
 (`SEARCH` / `APP` / etc.).
 
-### Phase 0 — Audit an existing/inherited account
+### Phase 0: Audit an existing/inherited account
 Run whenever taking over an account you didn't build, or at least monthly. For each
 item, note your confidence level: confirmed by reload/screenshot, assumed from
 settings, or genuinely blocked (a blocked item is "unscored," not "failed").
@@ -258,23 +254,24 @@ settings, or genuinely blocked (a blocked item is "unscored," not "failed").
 - [ ] Automated rules and auto-apply recommendations reviewed/disabled where they
       don't fit
 - [ ] Change history for the last month/quarter reviewed
-- [ ] Access/roles — least privilege, former agencies/employees removed
+- [ ] Access/roles, least privilege, former agencies/employees removed
 - [ ] Notifications go to a monitored inbox
-- [ ] Search terms report — high spend/zero conversions goes to negatives
-- [ ] **Copy on old/un-rebuilt campaigns checked separately from structure** — an
+- [ ] Search terms report, high spend/zero conversions goes to negatives
+- [ ] **Copy on old/un-rebuilt campaigns checked separately from structure**: an
       inherited campaign can carry outdated positioning that a structural rebuild
       never touched
 
-### Phase 1 — Account setup/verification
+### Phase 1: Account setup/verification
 1. Sub-account exists under the manager account and is linked (owner must accept)
-2. Payment profile is on the entity's real registration details — not a shared/
+2. Payment profile is on the entity's real registration details, not a shared/
    generic account across markets
 3. Advertiser identity + business verification done/submitted. Financial
-   products/services: Google's financial services verification expanded across many
-   more EU/EEA countries in 2026, with a short window before financial ads get
-   restricted; check per country, it needs the licence details from Step 0
-4. Currency/timezone double-checked before saving — irreversible
-5. Conversion tracking exists **before** building campaigns — verify sharing into
+   products/services: Google's financial services verification has been rolling out
+   country by country, with a deadline after which unverified financial ads are
+   restricted; check the current country list in Google's Financial services policy,
+   it needs the licence details from Step 0
+4. Currency/timezone double-checked before saving, irreversible
+5. Conversion tracking exists **before** building campaigns, verify sharing into
    *this* sub-account specifically
 6. Consent mode enabled for markets that require it
 7. Business profile linked
@@ -292,54 +289,56 @@ settings, or genuinely blocked (a blocked item is "unscored," not "failed").
   iOS campaigns) before structuring iOS.
 - Verify with a real install; some Google diagnostics lag several days.
 
-### Phase 2 — Keyword & audience research
+### Phase 2: Keyword & audience research
 - Match-type strategy: broad match + strong negatives + smart bidding; exact match
   reserved for brand and highest-intent terms (the only thing that reliably beats a
   broad-match campaign type on the same query)
-- Three-layer negative-keyword architecture: (1) master/shared list — generic
+- Three-layer negative-keyword architecture: (1) master/shared list, generic
   irrelevant terms plus your own vertical-specific banned terms; (2) campaign-level
   lists by intent; (3) ad-group-level negatives
-- Weekly search terms report — high spend/no conversions → negative; high
+- Weekly search terms report, high spend/no conversions → negative; high
   conversion/not yet a keyword → promote. In inflected languages every inflected
   form and the no-diacritics form is its own negative: build lists from a
   search-terms export split into 1-3 word n-grams, not by hand
 - Audience signals for app campaigns are a hint, not hard targeting: first-party
   match lists, custom segments, in-market, affinity. First-party match lists
   typically need four-figure list sizes to be usable and take real time to refresh
-  and take effect — budget for a lag before judging results.
+  and take effect, budget for a lag before judging results.
 
-### Phase 3 — Campaign structure
-- App campaigns: structure by creative theme via asset groups, not by audience.
-  Start with 1-2 asset groups, minimum ~10 assets per format, refresh top-performing
-  groups every 2-3 weeks.
-- Search campaigns: thematic ad groups (3-7 per campaign, one intent per group) —
+### Phase 3: Campaign structure
+- App campaigns: structure by creative theme via ad groups (App campaigns have ad
+  groups; asset groups belong to Performance Max), not by audience. Start with 1-2 ad
+  groups, fill every text slot and give each image ratio and each video orientation
+  at least one asset, refresh the weakest assets every 2-3 weeks.
+- Search campaigns: thematic ad groups (3-7 per campaign, one intent per group),
   single-keyword ad groups are not worth the overhead anymore.
 - Budget floor (Google's own table): **50× target CPI is for tCPI only**; install
   campaigns bidding on target CPA for an in-app action ≥10× target CPA; engagement
   campaigns ≥15×. If the approved budget can't meet it, say so as a known trade-off.
 - Zero impressions = not entering the auction (missing image assets, missing target,
   eligibility), not weak performance.
-- Performance Max: one campaign per conversion goal, needs roughly 30+ conversions
-  to exit learning, always paired with brand exclusions.
+- Performance Max: one campaign per conversion goal, give it several weeks and a
+  meaningful conversion volume before judging it (practitioners commonly cite ~30
+  conversions/month as a floor), always paired with brand exclusions.
 
-### Phase 4 — Creative specs
+### Phase 4: Creative specs
 | Format | Dimensions/ratio | Text | Video | Limits |
 |---|---|---|---|---|
-| Responsive search ad | — | 15 headlines (30 char), 4 descriptions (90 char), 2 path fields (15 char) | — | typically renders 2-3 headlines + 1-2 descriptions at once; special characters/symbols in headlines are often rejected |
-| App campaign asset group | 1:1, 1.91:1, 4:5 | 5 headlines + 5 descriptions in addition to store-listing assets | hosted video, 10-30s | images ≤5MB, up to 20; HTML5 zip ≤5MB/512 files/20 zips |
+| Responsive search ad | - | 15 headlines (30 char), 4 descriptions (90 char), 2 path fields (15 char) | - | typically renders 2-3 headlines + 1-2 descriptions at once; special characters/symbols in headlines are often rejected |
+| App campaign ad group | 1:1, 1.91:1, 4:5 | 5 headlines + 5 descriptions in addition to store-listing assets | hosted video, 10-30s | images ≤5MB, up to 20; HTML5 zip ≤5MB/512 files/20 zips |
 | Performance Max | at least one 1.91:1 + one 1:1, 4:5 optional | 15 headlines, 5 long headlines, 5 descriptions | min. 10s, 1080p recommended | ≤5120KB, up to 20 images |
 | Demand Gen | 1.91:1, 1:1, 4:5, 9:16 | 3-5 headlines (40 char), 1-5 descriptions (90 char) | 720p floor | carousel 2-10 cards |
 
-- Image extension policy: no text/logo overlay on the image itself — a common,
-  avoidable rejection reason.
-- **Final URL is a deliberate content decision, not a default** — some campaigns
+- Image assets (formerly image extensions) on Search: no text/logo overlay on the
+  image itself, a common, avoidable rejection reason.
+- **Final URL is a deliberate content decision, not a default**: some campaigns
   intentionally point straight to a store listing instead of a website; record that
   choice in the brief, don't assume "website" as the silent default.
 - App campaign images: text under 20 % of the image, no Download/Install wording in
   any language, plus text-free variants. Video assets go through YouTube.
 - Build creatives in-house per Creative production above, then QA plus human review.
 
-### Phase 5 — Pre-launch QA
+### Phase 5: Pre-launch QA
 - [ ] Ads show status "approved," not just "submitted"
 - [ ] Responsive search ad fully filled (all headline/description slots), ad
       strength "good"/"excellent"
@@ -351,18 +350,18 @@ settings, or genuinely blocked (a blocked item is "unscored," not "failed").
 - [ ] Image/app assets have no text/logo overlay
 - [ ] Generated creatives passed automated QA and a human review
 - [ ] Budget meets the phase-3 floor and is the exact number from the brief
-- [ ] **Built through the in-UI wizard flow, not a manually edited URL** — editing a
+- [ ] **Built through the in-UI wizard flow, not a manually edited URL**: editing a
       multi-step wizard's URL mid-flow can silently drop unfilled headlines/targeting
       that only persist on the final publish step
 
-### Phase 6 — Launch gate
+### Phase 6: Launch gate
 Everything checked off, but still **paused**. Summarize what's built, the proposed
 budget (with its success measure and rollback trigger), and what QA showed.
 **Immediately before flipping to live** (or executing an approved budget change),
-re-verify nothing changed in the account since the plan was made — more than one
+re-verify nothing changed in the account since the plan was made, more than one
 person/session may touch the same account. Only flip after an explicit "go."
 
-### Phase 7 — Ongoing optimization
+### Phase 7: Ongoing optimization
 - **Weekly**: search terms report, budget pacing, ad strength/disapprovals,
   delivery-stall check
 - **Bi-weekly**: asset report (wait ~14 days before judging a "low"-rated asset),
@@ -393,12 +392,12 @@ person/session may touch the same account. Only flip after an explicit "go."
 
 ### Lessons learned (assorted, so they don't repeat)
 - Coding-agent auto-approval settings can silently block *all* interactive input on
-  an ads platform's domain — including pure read actions like a keyword-planner
+  an ads platform's domain, including pure read actions like a keyword-planner
   query, not just spend-affecting ones. If you hit this on first run, ask for
   explicit permission in your tool's settings rather than working around it.
 - A delegated sub-task can get the wrong budget or wrong naming simply because
   nobody stated it explicitly (a placeholder number instead of the real one, a
-  local-language word instead of the required English one) — whenever you hand a
+  local-language word instead of the required English one), whenever you hand a
   task to someone/something else, write the exact number and the exact naming rule
   out, don't rely on it being inferred.
 
@@ -418,27 +417,27 @@ person/session may touch the same account. Only flip after an explicit "go."
 
 ### Naming convention
 See shared convention above; Meta's platform slot means "Google Play vs. Apple App
-Store" (Android vs. iOS), not traffic source — an easy misread, worth calling out
+Store" (Android vs. iOS), not traffic source, an easy misread, worth calling out
 explicitly in any brief.
 
 ### Non-negotiable guardrails
 See shared guardrails above, plus Meta-specific ones:
-- Never grant admin on the *entire* Business Portfolio to an agency or colleague —
+- Never grant admin on the *entire* Business Portfolio to an agency or colleague,
   scope partner access to the specific asset, with the lowest sufficient role.
-- Never leave a Business Portfolio with only one admin — flag it as a risk if an
+- Never leave a Business Portfolio with only one admin, flag it as a risk if an
   audit finds one.
-- Don't delete or edit someone else's broken/unfinished draft — just uncheck it in
+- Don't delete or edit someone else's broken/unfinished draft, just uncheck it in
   the publish dialog.
 
 ### Budget rules
-See shared section above — same principles (exact number from the brief, manual
+See shared section above, same principles (exact number from the brief, manual
 currency conversion against a known reference, audit for shadow campaigns before
 reallocating, promotional campaigns are a standing do-not-touch exception, check
 change history before "fixing" anything, expect identity verification on a
 dormant/new account, every budget proposal states five things including a rollback
 trigger, nothing is inferred from history as a default).
 
-### Phase 0 — Business Portfolio audit
+### Phase 0: Business Portfolio audit
 Run when taking over an account, launching a new market, or at least quarterly.
 - [ ] Asset structure: one Business Portfolio per legal entity, assets (page/ad
       account/pixel/social account) separated per market
@@ -451,7 +450,7 @@ Run when taking over an account, launching a new market, or at least quarterly.
 - [ ] No risky combinations: shared card across portfolios, sudden bulk changes,
       sudden payment-method changes
 
-### Phase 1 — Ad account setup
+### Phase 1: Ad account setup
 1. Payment method on the entity's real registration details, distinct from other
    portfolios. Warm up spend gradually rather than jumping straight to target
    budget.
@@ -481,9 +480,9 @@ Run when taking over an account, launching a new market, or at least quarterly.
   worse; consolidation helps more than config.
 - Verify with a real install.
 
-### Phase 2 — Targeting and audience strategy
+### Phase 2: Targeting and audience strategy
 - Automated/broad campaign types (e.g. "Advantage+"-style) don't take manual
-  targeting — your real levers are audience *signals* (seed audience) and
+  targeting, your real levers are audience *signals* (seed audience) and
   *exclusions*. Always exclude existing installed users/converters.
 - Custom audiences/lookalikes are a signal input to automated expansion, not a hard
   fence; under a restricted ad category, standard lookalikes are usually replaced by
@@ -492,30 +491,35 @@ Run when taking over an account, launching a new market, or at least quarterly.
   granular geo (down to postal code), forces a full age range, removes gender
   exclusion, removes standard lookalikes, restricts detailed/interest targeting.
 - Geo-targeting for offline/local campaigns is generally not subject to the same
-  restriction — radius targeting from roughly city to metro scale.
+  restriction, radius targeting from roughly city to metro scale.
 
-### Phase 3 — Campaign structure
+### Phase 3: Campaign structure
 - Consolidate: 2-4 campaigns per account, 1-2 broad ad sets per campaign, **3-6 ads
   per ad set** as a default (20-30+ only makes sense at meaningfully higher budgets)
-- Automated app-campaign type as the default — the levers that remain are budget,
+- Automated app-campaign type as the default, the levers that remain are budget,
   optimization event, and creative diversity
-- Learning phase: roughly 50 events per ad set over 7 days (lower threshold for app
-  installs). A budget change >20% or an audience/creative edit resets learning.
+- Learning phase: roughly 50 optimization events per ad set within 7 days of the last
+  significant edit. Significant edits (a large budget change, targeting, creative,
+  optimization event) restart it; practitioners keep budget steps under ~20 %.
   Prefer **duplicating** an ad set over editing a live one when adding creative.
-- One creative = one ad set; avoid unnecessary A/B splitting.
+- Avoid unnecessary A/B splitting: test concepts inside one ad set first, use a
+  formal A/B test only when you need a clean answer to one question.
 - **Consolidate at low budgets**: practitioners report that under roughly $10k/month
   one automated app campaign per OS often beats several, and overlapping app
   campaigns compete. Campaign count × budget ceiling must leave every line above the
   learning threshold; if it doesn't, the owner decides what to merge (it changes
   reporting and naming), the agent proposes.
 
-### Phase 4 — Creative specs
+### Phase 4: Creative specs
 | Placement | Dimensions/ratio | Video length | Limits |
 |---|---|---|---|
-| Feed | 4:5 recommended, 1:1 ok | up to 60 min | images ≤30MB |
-| Stories | 9:16 | up to 120s | video ≤4GB |
-| Reels | 9:16 | ~90s sweet spot | video ≤4GB |
-| Carousel | 1:1 per card | — | ≤30MB/card, 2-10 cards |
+| Feed | 4:5 recommended, 1:1 ok | keep it short, the hard max is far above what works | images ≤30MB |
+| Stories | 9:16 | short, hook in the first seconds | video ≤4GB |
+| Reels | 9:16 | short, hook in the first seconds | video ≤4GB |
+| Carousel | 1:1 per card | - | ≤30MB/card, 2-10 cards |
+
+Maximum lengths and file sizes per placement change; check Meta's Ads Guide for the
+placement before building, the table is for layout decisions, not limits.
 
 - Safe zones: top ~14% and bottom ~20-35% of a 9:16 canvas sit under UI overlays,
   sides ~6% are clear.
@@ -524,34 +528,35 @@ Run when taking over an account, launching a new market, or at least quarterly.
   into the first ~30-40 characters of each field.
 - Formats: JPG/PNG images, MP4/MOV video (H.264 + AAC, 30 fps); hook in the first
   2-3 seconds, captions on.
-- **Andromeda (Meta's retrieval system, since October 2025): concept variety does the
-  targeting.** Near-identical ads get grouped and delivered as one; test genuinely
+- **Andromeda (Meta's ad retrieval system, announced December 2024 and rolled out
+  through 2025): concept variety does the targeting.** Near-identical ads get grouped and delivered as one; test genuinely
   different concepts (angle, pain point, persona, format, proof), not colour swaps or
   reworded headlines. A plain product screenshot as the whole ad tends to get
   ignored; use it as proof inside a hook.
 - Build creatives in-house per Creative production above, then QA plus human review.
 
-### Phase 5 — Pre-launch QA
+### Phase 5: Pre-launch QA
 - [ ] Test events fired, pixel/CAPI deduplication confirmed
 - [ ] Safe zones respected
 - [ ] Generated creatives passed automated QA and a human review; concepts genuinely
       differ
-- [ ] UTM/destination URL checked — **UTM locks after saving**; renaming means
-      duplicating the ad
+- [ ] UTM/destination URL checked before publishing: editing URL parameters on a
+      live ad sends it back to review and can restart learning, so in practice a
+      rename means duplicating the ad
 - [ ] Audience overlap checked (>25% → fix via exclusions)
 - [ ] Compliance + restricted-category rules respected
 - [ ] English asset names
 - [ ] Known-UI-bugs doc reviewed
 - [ ] The review-and-publish dialog is the single source of truth for errors
 
-### Phase 6 — Launch gate
+### Phase 6: Launch gate
 Everything built and checked, but still **paused**. Summarize what's built, the
 proposed budget (with success measure and rollback trigger), and what QA showed.
 Immediately before flipping to active, re-verify nothing changed in the account
 since the plan was made. Only publish after an explicit "go," ad set by ad set,
 checking for other people's broken drafts before each step.
 
-### Phase 7 — Ongoing optimization
+### Phase 7: Ongoing optimization
 - **Frequency/fatigue**: prospecting gets risky above ~2.5, drops off above ~4.0;
   retargeting is safe to ~4-6, drops off above ~7-8
 - **Refresh trigger (combined)**: frequency >3.5 (7-day) **and** CTR -25% **and**
@@ -566,8 +571,8 @@ checking for other people's broken drafts before each step.
   50+ conversions
 - **A different optimization event = a new ad set/campaign**, not an edit (resets
   learning)
-- **Attribution windows**: Meta removed the 7-day view and 28-day view windows on
-  2026-01-12; queries return empty data, not an error. Don't compare reporting across
+- **Attribution windows**: Meta removed the 7-day view and 28-day view windows from
+  the Ads Insights API on 2026-01-12; queries return empty data, not an error. Don't compare reporting across
   that date without adjusting
 - **Account quality + pixel diagnostics**: weekly; flag low match-quality scores;
   48 hours with no data = an active outage
@@ -579,7 +584,7 @@ checking for other people's broken drafts before each step.
   cost-per-result jump): (1) pixel/CAPI health, (2) structure/fragmentation, (3)
   learning-phase status, (4) creative volume and fatigue, (5) audience/exclusion
   sanity, (6) attribution-window consistency, (7) budget pacing, (8) competitive
-  benchmark. **Check copy on old campaigns separately from structure** — an
+  benchmark. **Check copy on old campaigns separately from structure**: an
   inherited campaign can carry outdated positioning a rebuild never touched.
 - Report on a fixed cadence (e.g. every 3-4 days), leading with your real
   downstream conversion metric, not platform vanity metrics.
@@ -613,11 +618,13 @@ checking for other people's broken drafts before each step.
   read-only vs. write, where account data would go. Learn patterns from repos
   (checklists, a "no spend ceiling = no write" gate).
 - **Prefer official, read-only MCPs** (Google's `googleads/google-ads-mcp`, read-only
-  GAQL with a developer token; Meta's own hosted Ads MCP, starting read-only) over
+  GAQL with a developer token; Meta's official one if your account has access,
+  starting read-only) over
   third-party hosted ones that see account data or take tokens in URLs.
-- If anything gets built via Meta's API: from Marketing API v25
-  `smart_promotion_type=SMART_APP_PROMOTION` no longer creates Advantage+ App
-  campaigns (unified flow with `advantage_state`).
+- If anything gets built via Meta's API: Meta is retiring the legacy
+  `smart_promotion_type=SMART_APP_PROMOTION` creation path in favour of the unified
+  Advantage+ flow (`advantage_state_info`); check the Marketing API changelog for the
+  version you call before writing any code.
 
 ---
 
@@ -678,11 +685,9 @@ working files are in [`ads-ops/`](ads-ops/README.md).
 
 Both subagent definitions assume a second subagent focused on marketing strategy
 (campaign calendar, market priority) that they check in with before proposing
-budget/structure changes outside routine maintenance — drop that cross-reference if
+budget/structure changes outside routine maintenance, drop that cross-reference if
 you're running this solo.
 
-Both also assume the file lives inside a project folder a teammate can open
-directly (so they inherit the same working directory and any linked docs) — if you
-publish this to GitHub as a template instead, say so explicitly and expect whoever
-adopts it to fill in their own linked docs, since the value here is the process, not
-any specific account's data.
+Both also assume they run inside a project folder that holds (or links to) your own
+docs: tone of voice, naming, briefs, known UI bugs. This repo ships the process, not
+any account's data, so whoever adopts it fills those in.

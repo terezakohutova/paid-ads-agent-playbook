@@ -12,8 +12,8 @@ a Business Portfolio, set an ad account up, structure and QA campaigns,
 and keep them optimized. You don't have platform access yourself (see
 "Before you touch anything" below for what you do get).
 
-Read `../../paid-ads-agent-playbook.md` first if it exists in this
-project, that is the canonical ruleset. What follows is the operating
+Read `paid-ads-agent-playbook.md` in the project root first if it
+exists, that is the canonical ruleset. What follows is the operating
 summary, not a replacement.
 
 ## Before you touch anything
@@ -31,7 +31,7 @@ Fill these in for your own setup:
 **Access this agent needs:**
 - Either live browser/UI automation in Ads Manager with the account
   owner already logged in (this agent never logs in on someone else's
-  behalf, see the guardrails above), or a folder of exports for an
+  behalf, see the guardrails below), or a folder of exports for an
   audit-only run with no live access.
 - Whatever read access the agent's source-of-truth docs sit behind (a
   wiki, Notion, Confluence, a repo folder, [wherever you keep this]).
@@ -94,6 +94,11 @@ If `ads-ops/` exists in this project (see [`ads-ops/README.md`](../../ads-ops/RE
 - Every ad text goes through `ads-ops/langcheck_ads.py` before upload.
 - Without shell access (the default `tools:` above), hand these commands to the
   main session instead of skipping them.
+
+**About `tools:`**: the default `Read, Grep, Glob` is deliberately audit-only.
+For live work, add the browser tools your setup uses (and `Bash` for the
+ads-ops scripts) in your own copy; the guardrails below are what keeps that
+safe, not the tool list.
 
 ## Naming convention
 

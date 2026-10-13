@@ -12,7 +12,7 @@ project root:
 
     # change ledger: write the entry BEFORE the change, with the value read from the UI
     python -I ads-ops/ads_ops.py ledger add --channel meta --account market-a \
-        --object mka_acq_example_2610_ios --field "daily budget" \
+        --object MKA_acq_example_2610_ios --field "daily budget" \
         --before "300/day" --after "345/day" --why "best cost per activation, 7 days" \
         --approved "owner 2026-10-12" --rollback-if "cost per activation > 20 after 7 days"
     python -I ads-ops/ads_ops.py ledger verify <id>    # after the reload read-back
@@ -138,7 +138,7 @@ def cmd_done(args):
         print('usage: done <task-id> [--note "..."]')
         return 2
     tid = args[0]
-    note = args[args.index('--note') + 1] if '--note' in args else ''
+    note = opt(args[1:], 'note', False)
     c = load_cadence()
     for t in c['tasks']:
         if t['id'] == tid:
@@ -199,9 +199,14 @@ def render_ledger(entries):
 
 
 def opt(args, name, required=True):
+    """Value of --name. A flag followed by nothing or by another --flag is an error,
+    so `--before --after 2` can never record "--after" as the old value."""
     flag = '--' + name
     if flag in args:
-        return args[args.index(flag) + 1]
+        i = args.index(flag) + 1
+        if i >= len(args) or args[i].startswith('--'):
+            raise SystemExit(f'{flag} needs a value')
+        return args[i]
     if required:
         raise SystemExit(f'missing {flag}')
     return ''
@@ -214,9 +219,10 @@ def cmd_ledger(args):
     sub, rest = args[0], args[1:]
     entries = read_ledger()
     if sub == 'add':
-        for f in ('before', 'approved', 'rollback-if'):
+        for f in ('before', 'after', 'approved', 'rollback-if'):
             if not opt(rest, f, False).strip():
-                raise SystemExit(f'--{f} is required: no live change without the old value, an approval and a rollback trigger')
+                raise SystemExit(f'--{f} is required: no live change without the old value, the new value, '
+                                 'an approval and a rollback trigger')
         n = sum(1 for e in entries if e['date'] == today().isoformat()) + 1
         e = {
             'id': f"{today().strftime('%Y%m%d')}-{n:02d}",
@@ -253,6 +259,8 @@ def cmd_ledger(args):
                 return 0
         raise SystemExit(f'no ledger entry {rest[0]}')
     if sub == 'rollback':
+        if not rest:
+            raise SystemExit('usage: ledger rollback <id>')
         for e in entries:
             if e['id'] == rest[0]:
                 print(f"Rollback plan for {e['id']} ({e['channel']} / {e['account']}):")
@@ -275,6 +283,16 @@ def version_dir(r):
     return os.path.join(VERSIONS, *r.split('/'))
 
 
+def version_list(d, ext):
+    """Version files of one protected file, oldest first (index.jsonl order)."""
+    idx = os.path.join(d, 'index.jsonl')
+    if not os.path.exists(idx):
+        return []
+    with open(idx, encoding='utf-8') as f:
+        names = [json.loads(l)['version'] + ext for l in f if l.strip()]
+    return [n for n in names if os.path.isfile(os.path.join(d, n))]
+
+
 def sha(path):
     with open(path, 'rb') as f:
         return hashlib.sha256(f.read()).hexdigest()
@@ -286,12 +304,15 @@ def snapshot(path, reason='manual'):
         return None
     d = version_dir(r)
     os.makedirs(d, exist_ok=True)
-    existing = sorted(x for x in os.listdir(d) if x != 'index.jsonl')
+    existing = version_list(d, os.path.splitext(path)[1])
     if existing and sha(os.path.join(d, existing[-1])) == sha(path):
         return None                                          # identical to the latest version
     stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
     ext = os.path.splitext(path)[1]
-    dst = os.path.join(d, stamp + ext)
+    dst, n = os.path.join(d, stamp + ext), 1
+    while os.path.exists(dst):                               # two versions in the same second
+        stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S') + f'-{n}'
+        dst, n = os.path.join(d, stamp + ext), n + 1
     shutil.copy2(path, dst)
     with open(os.path.join(d, 'index.jsonl'), 'a', encoding='utf-8') as f:
         f.write(json.dumps({'version': stamp, 'reason': reason}, ensure_ascii=False) + '\n')
@@ -311,9 +332,8 @@ def cmd_versions(args):
     if not d or not os.path.isdir(d):
         print('no versions')
         return 0
-    for x in sorted(os.listdir(d)):
-        if x != 'index.jsonl':
-            print(os.path.splitext(x)[0], os.path.getsize(os.path.join(d, x)), 'B')
+    for x in version_list(d, os.path.splitext(args[0])[1]):
+        print(os.path.splitext(x)[0], os.path.getsize(os.path.join(d, x)), 'B')
     return 0
 
 
@@ -347,7 +367,7 @@ def cmd_hook_snapshot(args):
 
 
 def main(argv):
-    if not argv:
+    if not argv or argv[0] in ('-h', '--help', 'help'):
         print(__doc__)
         return 0
     cmd, args = argv[0], argv[1:]

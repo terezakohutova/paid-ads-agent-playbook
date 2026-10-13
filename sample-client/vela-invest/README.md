@@ -15,6 +15,10 @@ running against an account, instead of just describing what it would catch.
 - [`audit-output.md`](audit-output.md) - the Phase 0 checklist filled in
   against that data, each finding tied back to the specific guardrail or
   rule in the main playbook that catches it.
+- [`blind-run-2026-10-13.md`](blind-run-2026-10-13.md) - the evidence: a
+  fresh agent's unedited audit of the same data, given only the agent file
+  and the CSVs, and how it compares.
+- `preview.png` - the excerpt shown in the main README.
 
 Every issue in the data was planted to match a failure mode the main
 playbook already documents (a promoted-vs-secondary conversion action, a
@@ -30,10 +34,11 @@ introduce new ones.
    `sample-client/vela-invest/data/`."
 3. Compare what it finds against [`audit-output.md`](audit-output.md).
 
-[`audit-output.md`](audit-output.md) is not a hand-written mockup, it was
-verified by handing a fresh agent only `google-ads.md` and `data/`, no
-sight of the recorded output, and reconciling the two. That pass caught
-and fixed two real gaps (a checklist item the agent doesn't actually
-check, one finding the data didn't support yet), which is exactly why
-this file says what the agent actually finds rather than what it was
-expected to find.
+[`audit-output.md`](audit-output.md) is checked against a blind run, not
+written to look good: a fresh agent got only `google-ads.md` and `data/`,
+no sight of the recorded output, and its answer is kept as returned in
+[`blind-run-2026-10-13.md`](blind-run-2026-10-13.md). It found all seven
+planted issues and caught one real error in the earlier recorded audit
+(which conversion action the account bids on), now fixed. Where the two
+still differ, the reconciliation at the end of the blind run says why.
+`tests/test_repo.py` keeps the audit's numbers tied to the CSVs.
