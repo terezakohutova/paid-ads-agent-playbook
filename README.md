@@ -17,6 +17,8 @@ has been stripped or replaced with a placeholder.
 
 ## Try it in five minutes
 
+![Excerpt of the google-ads agent's audit of the fictional sample account](sample-client/vela-invest/preview.png)
+
 1. Copy `.claude/agents/google-ads.md` into your own project's
    `.claude/agents/` (no editing required to try it, the placeholders only
    matter once you point it at your own account).
