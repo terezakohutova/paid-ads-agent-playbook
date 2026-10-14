@@ -1,7 +1,8 @@
 # Sample client: Tallo
 
-A fictional app for saving and investing in ETF portfolios, running Google Ads and
-Meta in CZ, SK and PL. It exists to test the two agents' Phase 0 audits against
+Tallo is fictional: an invented app for saving and investing in ETF portfolios,
+running Google Ads and Meta in CZ, SK and PL. Any resemblance to a real company is
+accidental. It exists to test the two agents' Phase 0 audits against
 data where the right answer is known.
 
 - [`google/data/`](google/data/) and [`meta/data/`](meta/data/): the accounts as CSV
@@ -19,10 +20,11 @@ data where the right answer is known.
 ## How the runs were made
 
 Each run was a fresh Claude Sonnet subagent with no conversation history. Its folder
-held only a copy of the agent file and the CSVs. The prompt was neutral: "Audit the
-Google Ads account. The exports are in .../data/", nothing about the vertical, the
-date or what to look for (the exact text is in each `run.json`). No playbook, no
-answer key, no web.
+held only a copy of the agent file and the CSVs. The prompt was neutral ("Audit the
+Google Ads account. The exports are in .../data/") and said nothing about the
+vertical, the date or what to look for (the exact text is in each `run.json`). No
+playbook, no answer key, no web. The agent files the runs read are kept byte for
+byte in [`blind-runs/agent-files/`](blind-runs/agent-files/).
 
 ## Results
 
@@ -37,17 +39,9 @@ issue or are real but unplanted ("extra-valid", explained in each `scoring.json`
 strict precision counts only planted matches. Strict precision is the number to
 quote: the "extra-valid" label is the author's call.
 
-**Re-scored 2026-10-13** after an outside review, without changing any run output:
-G1 in the key named the wrong lever (a Target CPI App campaign optimises for
-installs whatever the Primary/Secondary status of First Deposit; bidding on it
-needs tCPA on that in-app action or tROAS). Both Google runs still count as finding
-G1, because both say nothing bids on First Deposit, but both blame the goal status,
-so neither would have fixed it. The reviewer also found two issues nobody planted
-(G17 App budgets under 50x target CPI, G18 a CZ ad priced in euro); they are in the
-key now and both Google runs miss them. M8 was reworded as low severity, and
-meta-run-1 had M6 counted twice for precision, now once. Before the re-score the
-table read 16/16 recall for both Google runs and 15/15 (strict 13/15) precision
-for the Meta run. Details in [`answer-key.md`](answer-key.md).
+The table was re-scored after an outside review added two issues nobody planted
+(G17, G18) and corrected G1; no run output changed. What changed and why is in
+[`answer-key.md`](answer-key.md#corrections-after-an-outside-review-2026-10-13).
 
 ## What these numbers do and don't show
 
@@ -69,7 +63,7 @@ for the Meta run. Details in [`answer-key.md`](answer-key.md).
 
 ## Try it yourself
 
-Copy `.claude/agents/google-ads.md` into your project and ask it to audit
-`sample-client/tallo/google/data/`, then compare with the answer key. To repeat a
+From the repo root, start `claude` and ask "audit the Google Ads account in
+`sample-client/tallo/google/data/`", then compare with the answer key. To repeat a
 blind run properly, give a fresh agent a folder holding only the agent file and the
 data, not this repo.

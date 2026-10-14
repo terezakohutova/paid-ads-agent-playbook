@@ -73,6 +73,15 @@ settings, business verification, 2FA, and the CZ budget change with its ledger r
 - **M8 was overstated.** Reworded as a low-severity consistency check. The Meta run
   marked it FAIL, high; it still matches the planted item but over-rates it.
 - **meta-run-1 counted M6 twice** for precision; it is counted once now.
+- **The re-score changed no run output.** Before it, the results table read 16/16
+  recall for both Google runs and 15/15 (strict 13/15) precision for the Meta run.
+
+## Agent file versions
+
+The runs used the agent files from commit `6625e0a`. The files were edited later
+(wording, the language-gate step, a corrected Target CPI note). The exact versions
+the runs read are in [`blind-runs/agent-files/`](blind-runs/agent-files/), and a
+test checks their sha256 against each `run.json`.
 
 ## Flaws in the sample itself, found by the runs
 

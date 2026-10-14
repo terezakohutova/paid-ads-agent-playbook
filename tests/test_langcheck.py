@@ -125,14 +125,22 @@ class TestFailsClosed(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         self.assertIn('NOT CHECKED', r.stdout)
 
-    def test_czech_with_korektor_off_and_no_dictionary_is_unchecked(self):
-        self.assertEqual(run('--no-online', '--lang', 'cz', 'Ahoj svete').returncode, 3)
+    def test_czech_without_a_dictionary_is_unchecked(self):
+        self.assertEqual(run('--no-online', '--lang', 'cs', 'Ahoj svete').returncode, 3)
 
     def test_usage_errors(self):
         self.assertEqual(run().returncode, 2)
         self.assertEqual(run('--lang').returncode, 2)
         self.assertEqual(run('--lang', 'de').returncode, 2)          # no texts
+        self.assertEqual(run('--market', 'XX', 'Text').returncode, 2)
         self.assertEqual(run('--help').returncode, 0)
+
+    def test_country_code_as_language_is_refused_with_a_hint(self):
+        for code, tag in (('cz', 'cs'), ('at', 'de-AT'), ('uk', 'en-GB')):
+            r = run('--lang', code, 'Text')
+            self.assertEqual(r.returncode, 2, r.stdout)
+            self.assertIn(f'--lang {tag}', r.stdout)
+            self.assertIn(f'--market {code.upper()}', r.stdout)
 
 
 class TestWithLanguageTool(unittest.TestCase):
@@ -149,8 +157,11 @@ class TestWithLanguageTool(unittest.TestCase):
         FakeLanguageTool.seen.clear()
 
     def test_finding_blocks_the_upload(self):
-        r = run('--lang', 'de', 'Das ist ein Tset', lt_url=self.url)
+        r = run('--layers', 'languagetool', '--lang', 'de', 'Das ist ein Tset', lt_url=self.url)
         self.assertEqual(r.returncode, 1, r.stdout)
+        r = run('--lang', 'de', 'Das ist ein Tset', lt_url=self.url)     # no dictionary here
+        self.assertEqual(r.returncode, 3, r.stdout)                     # 3 wins over 1
+        self.assertIn('"Tset" -> Test', r.stdout)                        # findings still listed
         self.assertIn('"Tset" -> Test', r.stdout)
         self.assertEqual(FakeLanguageTool.seen[0][0], 'de-DE')
         self.assertEqual(FakeLanguageTool.seen[0][2], 'picky')
@@ -171,7 +182,7 @@ class TestWithLanguageTool(unittest.TestCase):
         with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8') as f:
             json.dump(spec, f)
         try:
-            r = run(f.name, lt_url=self.url)
+            r = run('--layers', 'languagetool', f.name, lt_url=self.url)
         finally:
             os.unlink(f.name)
         self.assertEqual(r.returncode, 1, r.stdout)
@@ -210,7 +221,7 @@ class TestPartialCoverage(unittest.TestCase):
         FakeKorektor.calls, FakeKorektor.fail_after_first = 0, True
         server, url = serve(FakeKorektor)
         try:
-            r = run('--online', '--lang', 'cz', 'Ahoj světe', 'Druhý text', korektor_url=url + '/correct')
+            r = run('--online', '--lang', 'cs', 'Ahoj světe', 'Druhý text', korektor_url=url + '/correct')
         finally:
             stop(server)
         self.assertEqual(r.returncode, 3, r.stdout)
@@ -222,18 +233,18 @@ class TestOnlineIsOptIn(unittest.TestCase):
         FakeKorektor.calls, FakeKorektor.fail_after_first = 0, False
         server, url = serve(FakeKorektor)
         try:
-            r = run('--lang', 'cz', 'Ahoj světe', korektor_url=url + '/correct')
+            r = run('--lang', 'cs', 'Ahoj světe', korektor_url=url + '/correct')
         finally:
             stop(server)
         self.assertEqual(FakeKorektor.calls, 0)
-        self.assertEqual(r.returncode, 3, r.stdout)        # nothing local ran: unchecked, not clean
+        self.assertEqual(r.returncode, 3, r.stdout)        # no dictionary here: unchecked, not clean
         self.assertIn('--online', r.stdout)
 
     def test_korektor_runs_with_online(self):
         FakeKorektor.calls, FakeKorektor.fail_after_first = 0, False
         server, url = serve(FakeKorektor)
         try:
-            r = run('--layers', 'korektor', '--online', '--lang', 'cz', 'Ahoj světe', 'Druhý text',
+            r = run('--layers', 'korektor', '--online', '--lang', 'cs', 'Ahoj světe', 'Druhý text',
                     korektor_url=url + '/correct')
         finally:
             stop(server)
@@ -415,24 +426,47 @@ class TestRequestedLayerUnavailable(InProcess):
         self.assertEqual(code, 3, out)
         self.assertIn('[hunspell] NOT available', out)
 
-    def test_czech_without_online_says_grammar_not_checked(self):
-        code, out = self.main('--lang', 'cz', 'Ahoj světe')
+    def test_czech_without_online_is_spelling_only_and_says_so(self):
+        # LanguageTool has no Czech and Korektor (spelling, not grammar) is opt-in, so
+        # Hunspell is the layer that applies, as in copy-langcheck.
+        code, out = self.main('--lang', 'cs', 'Ahoj světe')
+        self.assertEqual(code, 0, out)
+        self.assertIn('spelling only', out)
+        self.assertIn('--online', out)
+
+    def test_korektor_requested_without_online_is_a_gap(self):
+        code, out = self.main('--layers', 'hunspell,korektor', '--lang', 'cs', 'Ahoj světe')
         self.assertEqual(code, 3, out)
-        self.assertIn('grammar not checked', out)
-        self.assertNotIn('clean', out)
+        self.assertIn('requested but off', out)
 
-    def test_czech_hunspell_only_on_purpose(self):
-        code, out = self.main('--layers', 'hunspell', '--lang', 'cz', 'Ahoj světe')
-        self.assertEqual(code, 0, out)
-        code, out = self.main('--allow-unchecked', '--lang', 'cz', 'Ahoj světe')
-        self.assertEqual(code, 0, out)
-        self.assertIn('grammar not checked', out)
-
-    def test_language_without_any_grammar_layer_is_not_clean_by_default(self):
+    def test_language_without_languagetool_is_spelling_only(self):
         code, out = self.main('--lang', 'hu', 'Egészség')
+        self.assertEqual(code, 0, out)
+        self.assertIn('spelling only', out)
+
+    def test_findings_with_a_missing_layer_is_exit_3_not_1(self):
+        # Before: exit 1, so the incomplete check hid behind the findings.
+        code, out = self.main('--lang', 'pl', 'Zainstalij aplikację')     # LanguageTool down
         self.assertEqual(code, 3, out)
-        self.assertIn('grammar not checked', out)
-        self.assertEqual(self.main('--layers', 'hunspell', '--lang', 'hu', 'Egészség')[0], 0)
+        self.assertIn('"Zainstalij"', out)
+        self.assertIn('1 findings', out)
+        code, out = self.main('--allow-unchecked', '--lang', 'pl', 'Zainstalij aplikację')
+        self.assertEqual(code, 1, out)
+
+    def test_market_codes_map_to_languages(self):
+        for market, expected in (('CZ', 'cs_CZ'), ('at', 'de_AT_frami'), ('UK', 'en_GB'), ('US', 'en_US')):
+            self.assertEqual(self.mod.resolve_market(market)[2], expected, market)
+        self.assertIsNone(self.mod.resolve_market('EU'))
+        for market, tag in self.mod.MARKETS.items():          # every market is in the docstring
+            self.assertIsNotNone(self.mod.resolve(tag), market)
+            self.assertIn(f'{market} {tag}', self.mod.__doc__)
+
+    def test_lang_key_wins_over_market_in_a_file(self):
+        path = spec_file({'market': 'CH', 'lang': 'fr', 'headline': 'Bonjour'})
+        try:
+            self.assertEqual(self.mod.collect(path)[0], ('lang', 'fr'))
+        finally:
+            os.unlink(path)
 
     def test_unknown_layer_is_a_usage_error(self):
         self.assertEqual(self.main('--layers', 'grammarly', '--lang', 'pl', 'x')[0], 2)
@@ -440,19 +474,21 @@ class TestRequestedLayerUnavailable(InProcess):
 
 class TestSpellingDetails(InProcess):
     def test_short_all_caps_words_are_checked(self):
-        code, out = self.main('--layers', 'hunspell', '--lang', 'cz', 'NOVÉ GRATSI')
+        code, out = self.main('--layers', 'hunspell', '--lang', 'cs', 'NOVÉ GRATSI')
         self.assertEqual(code, 1, out)
         self.assertIn('"GRATSI"', out)
         self.assertNotIn('"NOVÉ"', out)                          # known in lower case
 
     def test_listed_acronyms_stay_ignored(self):
-        code, out = self.main('--layers', 'hunspell', '--lang', 'cz', 'Ahoj EUR CTA')
+        code, out = self.main('--layers', 'hunspell', '--lang', 'cs', 'Ahoj EUR CTA')
         self.assertEqual(code, 0, out)
 
     def test_german_variants_use_their_own_dictionary_and_languagetool_code(self):
-        for code_in, dict_name, lt in (('de-AT', 'de_AT_frami', 'de-AT'), ('ch', 'de_CH_frami', 'de-CH'),
-                                       ('at', 'de_AT_frami', 'de-AT'), ('de', 'de_DE_frami', 'de-DE')):
+        for code_in, dict_name, lt in (('de-AT', 'de_AT_frami', 'de-AT'), ('de_ch', 'de_CH_frami', 'de-CH'),
+                                       ('de', 'de_DE_frami', 'de-DE')):
             self.assertEqual(self.mod.resolve(code_in), ('de', lt, dict_name), code_in)
+        self.assertEqual(self.mod.resolve_market('CH'), ('de', 'de-CH', 'de_CH_frami'))
+        self.assertIsNone(self.mod.resolve('ch'))                      # a country, not a language
         self.main('--layers', 'hunspell', '--lang', 'de-CH', 'Das ist gut')
         self.assertEqual(FakeDictionary.loaded, 'de_CH_frami')
 

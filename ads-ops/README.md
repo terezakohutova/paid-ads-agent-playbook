@@ -1,4 +1,4 @@
-# Ads ops - running the ads agents regularly and safely
+# Ads ops: running the ads agents regularly and safely
 
 The agents in `.claude/agents/` know *how* to audit, build and optimise. This folder makes them do it **on a schedule**, **ask for goals instead of guessing**, and **never make a change that can't be undone**. Everything here is plain files plus one dependency-free Python script.
 
@@ -11,7 +11,7 @@ The agents in `.claude/agents/` know *how* to audit, build and optimise. This fo
 | [`change-ledger.md`](change-ledger.md) | Every live change with the old value and the way back (generated from `changes.jsonl`) |
 | `snapshots/` | Exports of account state before audits and bigger changes (`YYYYMMDD-<channel>-<account>/`) |
 | [`ads_ops.py`](ads_ops.py) | `due`, `done`, `tasks`, `ledger ...`, `snapshot`, `versions`, `restore`, `hook-snapshot` |
-| [`langcheck_ads.py`](langcheck_ads.py) | Spelling and grammar gate for ad copy in any language |
+| [`langcheck_ads.py`](langcheck_ads.py) | Spelling and grammar gate for ad copy, by language or market |
 | [`settings.hooks.example.json`](settings.hooks.example.json) | The two Claude Code hooks to merge into your `.claude/settings.json` |
 
 ## 1. How "regularly" actually happens
@@ -52,14 +52,15 @@ The agents in `.claude/agents/` know *how* to audit, build and optimise. This fo
 - **Learnings:** rows are never deleted, only re-statused (`rejected <date> why`).
 
 ## 5. Language
-Every ad text in every market goes through `python -I ads-ops/langcheck_ads.py copy.json` (or `--lang de "text" ...`): Hunspell via `spylls` + LibreOffice dictionaries (local), LanguageTool (local server), and for Czech, only with `--online`, Korektor.
+Every ad text in every market goes through `python -I ads-ops/langcheck_ads.py copy.json` (or `--lang de "text" ...`, `--market AT "text" ...`). It uses the same layers, exit codes and language tags as [copy-langcheck](https://github.com/terezakohutova/copy-langcheck), which also reads HTML, Markdown and plain text and runs as a GitHub Action; this script adds the ad-platform fields and market codes.
 
-- **Exit codes:** 0 every text checked by every requested layer and clean, 1 findings, 2 usage (including an unknown `--layers` name, or a spec file with no recognised copy field; the message lists the keys it did see), **3 not fully checked**: a requested layer did not run (no dictionary, LanguageTool unreachable, Korektor without `--online`, no grammar layer for the language) or failed part way (a LanguageTool server that answers the first text and then dies). Coverage is tracked per text and per layer, and the unchecked texts are listed. `--allow-unchecked` exists only for a deliberate dry run.
-- **Layers:** by default every language gets spelling (Hunspell) and grammar. For every language except Czech, LanguageTool is the only grammar layer: when it is down, grammar is not checked at all, and the run says so and exits 3. Czech has no local grammar layer; without `--online` the run says "grammar not checked" and exits 3. To check spelling only on purpose, pass `--layers hunspell`.
-- **Regional variants:** markets `at`/`ch` (or `de-AT`/`de-CH`) are checked as Austrian and Swiss German with their own dictionaries (`de_AT_frami`, `de_CH_frami`) and LanguageTool codes; `us` and `br` likewise use `en_US`/`en-US` and `pt_BR`/`pt-BR`.
+- **Exit codes:** 0 clean and every layer that applies checked every text; 1 findings, with every layer complete; 2 usage (an unknown language, market or `--layers` name, or a spec file with no recognised copy field; the message lists the keys it did see); **3 not fully checked**: a layer that applies did not run (no dictionary, LanguageTool unreachable) or failed part way (a LanguageTool server that answers the first text and then dies). **3 wins over 1**: findings are still printed, but an incomplete check never looks like "only findings". Coverage is tracked per text and per layer, and the unchecked texts are listed. `--allow-unchecked` is a deliberate dry run (1 for findings, otherwise 0).
+- **Layers that apply:** Hunspell (spelling) always; LanguageTool (grammar) for every language it has a module for; Korektor (Czech spelling and diacritics in context, not grammar) only with `--online`. LanguageTool has no Czech and no Hungarian, so those are checked for spelling only and the run says so. For the other languages LanguageTool is the only grammar layer: when it is down, the run exits 3. `--layers hunspell` checks spelling only on purpose.
+- **Language or market:** `--lang` and a JSON `lang`/`language` key take a language tag (`cs`, `de-AT`, `en-US`...). `--market` and a JSON `market` key take a country, mapped explicitly: CZ cs, SK sk, PL pl, DE de, AT de-AT, CH de-CH, GB/UK/IE en-GB, US en-US, ES es, FR fr, IT it, HU hu, NL nl, PT pt, BR pt-BR. A country code given as a language (`--lang cz`, `--lang uk`) is exit 2 with a hint, not a guess. In a file, `lang` wins over `market`.
+- **Regional variants:** `de-AT`/`de-CH` (markets AT/CH) are checked as Austrian and Swiss German with their own dictionaries (`de_AT_frami`, `de_CH_frami`) and LanguageTool codes; `en-US` and `pt-BR` likewise use `en_US` and `pt_BR`.
 - **ALL-CAPS words** are checked like any other word (looked up as written, in lower case and capitalised). An acronym that is fine on purpose goes in `langcheck-ignore.txt`.
 - **Fields collected from a spec file:** `headline(s)`, `description(s)`, `long_headline(s)`, `primary_text(s)`, `cta`, `text`, `copy`, `sub`, `subline`, and the Meta Marketing API names `message` (primary text), `body`/`bodies`, `title`/`titles`, `link_description`, plus `name` inside `link_data`, `child_attachments` or `template_data` (there it is the headline; elsewhere `name` is an internal ad name and is skipped). Google text assets: `sitelink_text`/`link_text` with `description1`/`description2` (and the legacy `line1`/`line2`), `callout(s)`/`callout_text`, display URL `path1`/`path2`, `business_name`, `promotion_target`, and `values` inside a `structured_snippet`.
-- **Korektor is opt-in** because it sends the ad text to an external server (LINDAT/CLARIAH-CZ). Per the service pages at the time of writing, its models are licensed CC BY-NC-SA, so commercial use needs permission from the authors, and submitted text may be logged by the service. Check the current terms before sending client copy. Without `--online`, Czech grammar is not checked and the run exits 3 unless you pass `--layers hunspell` (spelling only, on purpose).
+- **Korektor is opt-in** because it sends the ad text to an external server (LINDAT/CLARIAH-CZ). Per the service pages at the time of writing, its models are licensed CC BY-NC-SA, so commercial use needs permission from the authors, and submitted text may be logged by the service. Check the current terms before sending client copy. Without `--online`, Czech is checked by Hunspell alone.
 - Tools do not judge tone, claims or brand rules: the agent still reads every text against the tone-of-voice doc.
 
 ## Setup
@@ -68,7 +69,7 @@ Every ad text in every market goes through `python -I ads-ops/langcheck_ads.py c
 3. Fill in `goals.md` and the competitor table in `watchlist.md`, or let the first `goals-checkin` ask for them.
 4. Optional, for the language check: `pip install spylls`, download the `.aff`/`.dic` files you need from `LibreOffice/dictionaries` into a folder and point `LANGTOOLS_DICTS` at it; run a LanguageTool server (`LT_URL`, default `http://localhost:8081/v2/check`).
 5. Add `.versions/` and `ads-ops/snapshots/*/` to `.gitignore` if the project is a public repo: account exports do not belong on GitHub.
-6. The commands use `python`; where your system calls it `python3` (macOS, most Linux), change the two hook commands too. Python 3.9+, standard library only.
+6. The commands use `python`; where your system calls it `python3` (macOS, most Linux), change the two hook commands too. Python 3.10+, standard library only.
 
 ## Tests
 `python -m unittest discover -s tests` from the repo root. The tests run both scripts as subprocesses against a throwaway copy of this folder (cadence, every ledger path including refusals and out-of-order transitions, eight concurrent `ledger add` processes, a stale lock, version collisions within one second, retention, restore inside and outside the project, the hook on bad input) and the language gate against local stand-ins for the LanguageTool and Korektor APIs, including servers that fail after the first text, so they need no network and no dictionaries.

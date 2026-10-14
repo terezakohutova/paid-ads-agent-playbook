@@ -177,7 +177,18 @@ class TestBlindRuns(unittest.TestCase):
     RUNS = os.path.join(SAMPLE, 'blind-runs')
 
     def runs(self):
-        return sorted(d for d in os.listdir(self.RUNS) if os.path.isdir(os.path.join(self.RUNS, d)))
+        return sorted(d for d in os.listdir(self.RUNS)
+                      if os.path.isfile(os.path.join(self.RUNS, d, 'run.json')))
+
+    def test_agent_files_as_run_match_the_recorded_hashes(self):
+        """The agent files changed after the runs; the exact versions read are kept."""
+        import hashlib
+        for run in self.runs():
+            meta = json.loads(read(os.path.join(self.RUNS, run, 'run.json')))
+            name = meta['inputs']['agent_file']['name'].replace('.md', '-as-run.md.txt')
+            with open(os.path.join(self.RUNS, 'agent-files', name), 'rb') as f:
+                self.assertEqual(hashlib.sha256(f.read()).hexdigest(),
+                                 meta['inputs']['agent_file']['sha256'], run)
 
     def test_at_least_two_google_runs_and_one_meta_run(self):
         runs = self.runs()

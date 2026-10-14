@@ -1,41 +1,52 @@
 # -*- coding: utf-8 -*-
-"""Native-language check of ad copy before upload.
+"""Language check of ad copy before upload.
 
-Read-only, it never changes the copy. Exit codes, so it can gate an upload the
-same way creative QA does:
-    0  every text was checked by every requested layer, nothing found
-    1  findings (do not upload)
-    2  usage error (no texts, no language, unknown layer, a spec file with no recognised copy field)
-    3  not fully checked: a requested layer was not available (no dictionary, server
-       unreachable, Korektor without --online, no grammar layer for the language) or
-       failed part way and left some texts unchecked. Fails closed: a partial check is
-       never reported as clean. --allow-unchecked turns this into exit 0 for a
-       deliberate dry run (the gap is still printed).
+Read-only: it never changes the copy. Exit codes, so it can gate an upload:
+    0  every layer that applies checked every text, nothing found
+    1  findings, and every layer that applies checked every text (do not upload)
+    2  usage error (no texts, unknown language or market, unknown layer, a spec file
+       with no recognised copy field)
+    3  not fully checked: a layer that applies did not check every text (no dictionary,
+       LanguageTool unreachable or failing part way). 3 wins over 1: findings are still
+       printed, but a partial check is never reported as clean or as "only findings".
+       --allow-unchecked is a deliberate dry run: it gives 1 for findings, otherwise 0,
+       and still prints the gap.
 
-    python -I ads-ops/langcheck_ads.py copy.json            # {"market": "pl", "copy": ["...", "..."]}
-    python -I ads-ops/langcheck_ads.py spec.json            # any JSON with a "market"/"lang" key, see COPY_KEYS
-    python -I ads-ops/langcheck_ads.py --lang de "Text 1" "Text 2"
-    add --online to also use Korektor for Czech (the only tool that sends text out)
+    python -I ads-ops/langcheck_ads.py copy.json              # {"market": "PL", "copy": ["...", "..."]}
+    python -I ads-ops/langcheck_ads.py spec.json              # any JSON with "lang" or "market", see COPY_KEYS
+    python -I ads-ops/langcheck_ads.py --lang de-AT "Text 1" "Text 2"
+    python -I ads-ops/langcheck_ads.py --market CZ "Text"
+    add --online to also use Korektor for Czech (the only layer that sends text out)
     add --layers hunspell[,languagetool,korektor] to request only some layers on purpose
-    add --allow-unchecked to exit 0 even when not every text was checked (dry run only)
+    add --allow-unchecked for a dry run that does not fail on a missing layer
 
-Layers. By default a language gets spelling (Hunspell) and grammar (LanguageTool;
-for Czech, Korektor). Every requested layer must run on every text, or the result is exit 3:
-  - Hunspell via spylls (pip install spylls) + LibreOffice dictionaries
-    (github.com/LibreOffice/dictionaries; put the .aff/.dic files in LANGTOOLS_DICTS).
+Language or market. --lang and a JSON "lang" or "language" key take a language tag:
+cs, sk, pl, de, de-AT, de-CH, en, en-GB, en-US, es, fr, it, hu, nl, pt, pt-BR
+(case and "_" or "-" do not matter). --market and a JSON "market" key take a country
+and map it through MARKETS:
+    CZ cs, SK sk, PL pl, DE de, AT de-AT, CH de-CH, GB en-GB, UK en-GB, IE en-GB,
+    US en-US, ES es, FR fr, IT it, HU hu, NL nl, PT pt, BR pt-BR
+A country code given as a language (--lang cz, --lang at, --lang uk) is exit 2, not a
+guess: "uk" is Ukrainian as a language. In a file, "lang" wins over "market".
+
+Layers that apply:
+  - Hunspell (spelling), always: spylls (pip install spylls) with LibreOffice
+    dictionaries (github.com/LibreOffice/dictionaries; .aff/.dic files in LANGTOOLS_DICTS).
     Regional variants use their own dictionary (de_AT_frami, de_CH_frami, en_US, pt_BR).
-  - LanguageTool, level=picky, local HTTP server (LT_URL, default http://localhost:8081/v2/check).
-    For every language except Czech it is the only grammar layer, so when it is down
-    grammar is not checked at all. It has no Czech.
-  - Czech has no local grammar layer. Without --online the run says "grammar not checked"
-    and exits 3, unless you pass --layers hunspell (spelling only, on purpose).
-  - Korektor (UFAL, LINDAT REST API) for Czech spelling and diacritics. Off unless
-    --online is given: it sends the ad text to an external server. Per the LINDAT
-    service pages at the time of writing, the Korektor models are licensed CC BY-NC-SA
-    (commercial use needs permission from the authors) and submitted text may be
-    logged by the service. Check the current terms before using it on client copy.
-Extra words that are fine on purpose (brand, product, feature names): one per line in
-ads-ops/langcheck-ignore.txt.
+  - LanguageTool (grammar), for every language it has a module for: level=picky, a local
+    server (LT_URL, default http://localhost:8081/v2/check). It has no Czech and no
+    Hungarian, so those are checked for spelling only, and the run says so.
+  - Korektor (UFAL, LINDAT REST API): Czech spelling and diacritics in context, not
+    grammar. It applies only with --online, because it sends the ad text to an external
+    server. Per the LINDAT service pages at the time of writing, the Korektor models are
+    licensed CC BY-NC-SA (commercial use needs permission from the authors) and
+    submitted text may be logged. Check the current terms before using it on client copy.
+
+Same layers, exit codes and language tags as copy-langcheck
+(github.com/terezakohutova/copy-langcheck), which also reads HTML, Markdown and plain
+text and runs as a GitHub Action. This script adds the ad-platform fields (Meta
+Marketing API specs, Google text assets) and market codes. Extra words that are fine on
+purpose (brand, product, feature names): one per line in ads-ops/langcheck-ignore.txt.
 """
 import json
 import os
@@ -49,36 +60,48 @@ DICTS = os.environ.get('LANGTOOLS_DICTS') or os.path.join(HERE, 'dicts')
 LT_URL = os.environ.get('LT_URL') or 'http://localhost:8081/v2/check'
 KOREKTOR = os.environ.get('KOREKTOR_URL') or 'https://lindat.mff.cuni.cz/services/korektor/api/correct'
 
-MARKET_LANG = {'cz': 'cs', 'cs': 'cs', 'sk': 'sk', 'pl': 'pl', 'de': 'de', 'at': 'de', 'ch': 'de',
-               'en': 'en', 'uk': 'en', 'gb': 'en', 'eu': 'en', 'es': 'es', 'fr': 'fr', 'it': 'it',
-               'hu': 'hu', 'nl': 'nl', 'pt': 'pt'}
-LT_LANG = {'en': 'en-GB', 'de': 'de-DE', 'pl': 'pl-PL', 'sk': 'sk-SK', 'es': 'es', 'fr': 'fr',
-           'it': 'it', 'pt': 'pt-PT', 'nl': 'nl'}
-HUNSPELL = {'cs': 'cs_CZ', 'sk': 'sk_SK', 'pl': 'pl_PL', 'de': 'de_DE_frami', 'es': 'es_ES',
-            'fr': 'fr_FR', 'it': 'it_IT', 'en': 'en_GB', 'hu': 'hu_HU', 'nl': 'nl_NL', 'pt': 'pt_PT'}
-# Regional variants: (language, LanguageTool code, Hunspell dictionary). Swiss German has
-# no "ß", Austrian German has its own vocabulary: checking them as de-DE gives wrong findings.
-VARIANTS = {
-    'at': ('de', 'de-AT', 'de_AT_frami'), 'de-at': ('de', 'de-AT', 'de_AT_frami'),
-    'ch': ('de', 'de-CH', 'de_CH_frami'), 'de-ch': ('de', 'de-CH', 'de_CH_frami'),
-    'us': ('en', 'en-US', 'en_US'), 'en-us': ('en', 'en-US', 'en_US'),
-    'br': ('pt', 'pt-BR', 'pt_BR'), 'pt-br': ('pt', 'pt-BR', 'pt_BR'),
+# Language tag -> (language, LanguageTool code or None, Hunspell dictionary). Regional
+# variants have their own entry: Swiss German has no "ß", Austrian German has its own
+# vocabulary, so checking them as de-DE gives wrong findings.
+LANGS = {
+    'cs': ('cs', None, 'cs_CZ'), 'cs-cz': ('cs', None, 'cs_CZ'),
+    'sk': ('sk', 'sk-SK', 'sk_SK'), 'sk-sk': ('sk', 'sk-SK', 'sk_SK'),
+    'pl': ('pl', 'pl-PL', 'pl_PL'), 'pl-pl': ('pl', 'pl-PL', 'pl_PL'),
+    'de': ('de', 'de-DE', 'de_DE_frami'), 'de-de': ('de', 'de-DE', 'de_DE_frami'),
+    'de-at': ('de', 'de-AT', 'de_AT_frami'), 'de-ch': ('de', 'de-CH', 'de_CH_frami'),
+    'en': ('en', 'en-GB', 'en_GB'), 'en-gb': ('en', 'en-GB', 'en_GB'), 'en-us': ('en', 'en-US', 'en_US'),
+    'es': ('es', 'es', 'es_ES'), 'fr': ('fr', 'fr', 'fr_FR'), 'it': ('it', 'it', 'it_IT'),
+    'hu': ('hu', None, 'hu_HU'), 'nl': ('nl', 'nl', 'nl_NL'),
+    'pt': ('pt', 'pt-PT', 'pt_PT'), 'pt-pt': ('pt', 'pt-PT', 'pt_PT'), 'pt-br': ('pt', 'pt-BR', 'pt_BR'),
+}
+# Market (country) -> language tag. Listed in the docstring too; a test keeps them in sync.
+MARKETS = {
+    'CZ': 'cs', 'SK': 'sk', 'PL': 'pl', 'DE': 'de', 'AT': 'de-AT', 'CH': 'de-CH',
+    'GB': 'en-GB', 'UK': 'en-GB', 'IE': 'en-GB', 'US': 'en-US', 'ES': 'es', 'FR': 'fr',
+    'IT': 'it', 'HU': 'hu', 'NL': 'nl', 'PT': 'pt', 'BR': 'pt-BR',
 }
 LAYERS = ('hunspell', 'languagetool', 'korektor')
 
 
 def resolve(code):
-    """Market or language code -> (language, LanguageTool code or None, Hunspell dictionary or None)."""
-    c = str(code or '').strip().lower().replace('_', '-')
-    if c in VARIANTS:
-        return VARIANTS[c]
-    lang = MARKET_LANG.get(c) or MARKET_LANG.get(c.split('-')[0]) or c
-    return lang, LT_LANG.get(lang), HUNSPELL.get(lang)
+    """Language tag -> (language, LanguageTool code or None, Hunspell dictionary), or None."""
+    return LANGS.get(str(code or '').strip().lower().replace('_', '-'))
 
 
-def grammar_layers(lang):
-    """The layers that check more than single words, for this language."""
-    return ['korektor'] if lang == 'cs' else (['languagetool'] if LT_LANG.get(lang) else [])
+def resolve_market(code):
+    """Market (country code) -> the same tuple as resolve(), or None."""
+    tag = MARKETS.get(str(code or '').strip().upper())
+    return resolve(tag) if tag else None
+
+
+def bad_code_message(code, kind):
+    c = str(code).strip()
+    if kind == 'lang' and c.upper() in MARKETS and resolve(c) is None:
+        return (f'"{c}" is a country code, not a language: use --lang {MARKETS[c.upper()]} '
+                f'or --market {c.upper()}')
+    if kind == 'lang':
+        return f'unsupported language "{c}"; known: {", ".join(sorted(LANGS))}'
+    return f'unknown market "{c}"; known: {", ".join(MARKETS)}'
 
 # Platform and industry terms that are never typos.
 IGNORE = {
@@ -128,10 +151,16 @@ def ignored(w):
 
 
 def collect(path):
-    """Return (market/lang code as written, [texts], {unrecognised string keys}) from any JSON."""
+    """Return ((kind, code) or None, [texts], {unrecognised string keys}) from any JSON.
+    kind is 'lang' for a "lang"/"language" key (wins) or 'market' for a "market" key."""
     with open(path, encoding='utf-8') as f:
         d = json.load(f)
-    lang = (str(d.get('market', d.get('lang', ''))).strip() or None) if isinstance(d, dict) else None
+    lang = None
+    if isinstance(d, dict):
+        for key, kind in (('lang', 'lang'), ('language', 'lang'), ('market', 'market')):
+            if str(d.get(key) or '').strip():
+                lang = (kind, str(d[key]).strip())
+                break
     texts, other = [], set()
 
     def walk(x, key='', parents=()):
@@ -145,7 +174,7 @@ def collect(path):
             if (key in COPY_KEYS or (key == 'name' and any(p in NAME_IS_COPY_UNDER for p in parents))
                     or (key == 'values' and any(p in VALUES_ARE_COPY_UNDER for p in parents))):
                 texts.append(x)
-            elif key not in ('market', 'lang'):
+            elif key not in ('market', 'lang', 'language'):
                 other.add(key)
     walk(d)
     return lang, texts, other
@@ -238,32 +267,40 @@ def main(argv):
     if not argv:
         print(__doc__)
         return 2
-    if argv[0] == '--lang':
+    if argv[0] in ('--lang', '--market'):
         if len(argv) < 2:
-            print('usage: --lang <code> "text" ...')
+            print(f'usage: {argv[0]} <code> "text" ...')
             return 2
-        code, texts, other = argv[1], argv[2:], set()
+        code, texts, other = (argv[0][2:], argv[1]), argv[2:], set()
     else:
         code, texts, other = collect(argv[0])
     if not code:
-        print('no market/lang in the file; pass --lang')
+        print('no "lang" or "market" in the file; pass --lang or --market')
         return 2
-    lang, ltl, dict_name = resolve(code)
+    kind, value = code
+    resolved = resolve(value) if kind == 'lang' else resolve_market(value)
+    if resolved is None:
+        print(bad_code_message(value, kind))
+        return 2
+    lang, ltl, dict_name = resolved
     texts = [t for t in dict.fromkeys(texts) if t.strip()]
     if not texts:
         print(f'no ad copy found (recognised keys: {", ".join(COPY_KEYS)}, and "name" under '
               f'{", ".join(NAME_IS_COPY_UNDER)}).' + (f' Keys seen: {", ".join(sorted(other))}.' if other else '')
               + ' Nothing was checked.')
         return 2
-    grammar = grammar_layers(lang)
-    requested = explicit_layers or ['hunspell'] + grammar
+    # The layers that apply: Hunspell always, LanguageTool where it has the language,
+    # Korektor for Czech only with --online. --layers narrows this on purpose.
+    applies = ['hunspell'] + (['languagetool'] if ltl else []) + (['korektor'] if lang == 'cs' and online else [])
+    requested = explicit_layers or applies
     problems = 0
     coverage = {name: set() for name in requested}     # requested layer -> texts it actually checked
     gaps = []                                          # why something requested did not run
 
-    if not explicit_layers and not grammar:
-        gaps.append(f'grammar not checked: no grammar layer for {lang} (LanguageTool does not support it). '
-                    'Pass --layers hunspell to check spelling only on purpose.')
+    if not explicit_layers and not ltl:
+        print(f'note: LanguageTool has no {lang}, so {lang} is checked for spelling only (no grammar layer).'
+              + (' Korektor (Czech spelling and diacritics in context) is off; --online turns it on.'
+                 if lang == 'cs' and not online else ''))
 
     if 'hunspell' in requested:
         unk = unknown_words(texts, dict_name)
@@ -278,7 +315,7 @@ def main(argv):
                     print(f'[hunspell] unknown "{w}"  in: {t}')
 
     if 'languagetool' in requested:
-        only = ' (LanguageTool is the only grammar layer for ' + lang + ')' if grammar == ['languagetool'] else ''
+        only = f' (LanguageTool is the only grammar layer for {lang})' if ltl else ''
         if not ltl:
             gaps.append(f'[languagetool] has no {lang}; grammar NOT checked by it')
         else:
@@ -299,9 +336,8 @@ def main(argv):
         if lang != 'cs':
             gaps.append(f'[korektor] is Czech only; {lang} NOT checked by it')
         elif not online:
-            gaps.append('[korektor] off (it sends text to an external server; pass --online to use it). '
-                        'Czech grammar not checked: there is no local grammar layer for Czech. '
-                        'Pass --layers hunspell to check spelling only on purpose.')
+            gaps.append('[korektor] requested but off: it sends text to an external server, '
+                        'pass --online to use it. Czech NOT checked by Korektor')
         else:
             def k_report(t, fixes):
                 nonlocal problems
@@ -335,9 +371,11 @@ def main(argv):
                 print(f'  - {t}')
         if problems:
             print(f'{problems} findings in the texts that were checked.')
-            return 1
-        print('Allowed by --allow-unchecked.' if allow_unchecked else 'Do not upload.')
-        return 0 if allow_unchecked else 3
+        if allow_unchecked:
+            print('Dry run (--allow-unchecked): the gap above is not counted.')
+            return 1 if problems else 0
+        print('Do not upload: not fully checked (exit 3 wins over findings).')
+        return 3
     print(f'{len(texts)} texts checked in {lang} with {tools}: '
           + ('clean' if not problems else f'{problems} findings'))
     print('Tools do not judge tone, claims or brand rules: read every text yourself too.')
