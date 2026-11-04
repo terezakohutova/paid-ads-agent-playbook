@@ -48,7 +48,7 @@ and the [blind runs](sample-client/tallo/blind-runs/). For Meta, ask for an audi
 
 | Path | What |
 |---|---|
-| [`.claude/agents/`](.claude/agents/) | `google-ads` and `facebook-ads`: operating summary, guardrails, Phase 0 audit checklist, output format. Audit-only by default (`Read, Grep, Glob`) |
+| [`.claude/agents/`](.claude/agents/) | `google-ads` (persona Thomas Alva Edison) and `facebook-ads` (persona Phineas Taylor Barnum): operating summary, guardrails, Phase 0 audit checklist, output format. Audit-only by default (`Read, Grep, Glob`). The persona shows only in chat; files stay neutral |
 | [`paid-ads-agent-playbook.md`](paid-ads-agent-playbook.md) | The full ruleset: entities, naming, starter pack, briefs, measurement, creative production, event priority, guardrails 1-19, budget rules, Phases 0-7 per platform, learning loop, ops layer |
 | [`ads-ops/`](ads-ops/README.md) | Running the agents every week: cadence with overdue reminders, goals check-in, change ledger, automatic file versions, a language gate for ad copy |
 | [`.claude/skills/ads-research-scan/`](.claude/skills/ads-research-scan/SKILL.md) | Monthly scan of changelogs, practitioner sources and GitHub, logged as hypotheses, never installed on the spot |
